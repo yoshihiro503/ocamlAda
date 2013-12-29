@@ -14,10 +14,22 @@ module SpecialChar = struct
   let quotation = char '\'' <|>  char '\"'
 end
 
-let white =
-  many begin
-    char_when (function | ' ' | '\t' | '\r' | '\n' -> true | _ -> false)
-  end
+let white1 =
+  char_when (function | ' ' | '\t' | '\r' | '\n' -> true | _ -> false)
+  >> return ()
+
+let line_comment =
+  keyword "--" >>
+  many (char_when ((<>) '\n')) >>
+  char '\n' >> return ()
+
+let token p =
+  p >>= fun x ->
+  many (line_comment <|> white1) >>
+  return x
+
+let token_char c = token (char c)
+let token_word w = token (keyword w)
 
 (**  Lexical Elements **)
 let digit =
@@ -34,30 +46,36 @@ let identifier_letter2 =
   identifier_letter <|> char '_' <|> digit
 
 let identifier =
-  identifier_letter >>= fun c1 ->
-  many identifier_letter2 >>= fun cs ->
-  return @@ string_of_chars (c1::cs)
+  token begin
+    identifier_letter >>= fun c1 ->
+    many identifier_letter2 >>= fun cs ->
+    return @@ string_of_chars (c1::cs)
+  end
 
 let graphic_character =
   identifier_letter <|> digit
   <|> SpecialChar.space <|> SpecialChar.iso_10646_BMP
 
 let character_literal =
-  char '\'' >>
-  graphic_character >>= fun c ->
-  char '\'' >>
-  return @@ String.make 1 c
+  token begin
+    char '\'' >>
+    graphic_character >>= fun c ->
+    char '\'' >>
+    return @@ String.make 1 c
+  end
 
 let string_literal =
   let string_element =
     (keyword "\"\"" >> return '\"')
     <|> graphic_character
   in
-  SpecialChar.quotation >>= fun q1 ->
-  many string_element >>= fun cs ->
-  SpecialChar.quotation >>= fun q2 ->
-  guard (q1 = q2) >>
-  return @@ string_of_chars cs
+  token begin
+    SpecialChar.quotation >>= fun q1 ->
+    many string_element >>= fun cs ->
+    SpecialChar.quotation >>= fun q2 ->
+    guard (q1 = q2) >>
+    return @@ string_of_chars cs
+  end
 
 let operator_symbol = string_literal
 
@@ -78,12 +96,12 @@ and name_nexts prevname =
 
 and name_next prevname =
   (*explicit_dereference*)
-  (char '.' >> keyword "all")
+  (token_char '.' >> keyword "all")
   (*indexed_component*)
-  <|> (char '(' >> sep(char '.')(expression()) << char ')' >>= fun es -> return "indexed_component")
+  <|> (token_char '(' >> sep(token_char '.')(expression()) << token_char ')' >>= fun es -> return "indexed_component")
   (*slice*)
   (*selected_component*)
-  <|> (char '.' >> selector_name)
+  <|> (token_char '.' >> selector_name)
   (*attribute_reference*)
   (*type_conversion*)
   (*function_call*)
@@ -97,9 +115,9 @@ let with_clause =
   let library_unit_name =
     name () >>= fun s -> print_endline ("lu_name: "^s); return s
   in
-  keyword "with" >> white >>
-  sep (keyword ",") library_unit_name >>= fun lu_names ->
-  white >> keyword ";" >>
+  token_word "with" >>
+  sep (token_char ',') library_unit_name >>= fun lu_names ->
+  token_char ';' >>
   return (lu_names)
 
 let use_clause = todo "use_clause"
