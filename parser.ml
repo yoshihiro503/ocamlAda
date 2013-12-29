@@ -1,5 +1,8 @@
+(** SEE: http://cui.unige.ch/isi/bnf/Ada95/BNFindex.html **)
 open Util
 open ParserMonad
+
+type 'a parser = 'a ParserMonad.t
 
 let guard b = if b then return () else error "Guard"
 
@@ -63,61 +66,58 @@ let selector_name =
   identifier <|> character_literal <|> operator_symbol
 
 let rec direct_name () =
-  identifier
-  <|> operator_symbol
-
-and explicit_dereference () = todo "explicit_dereference"
-and indexed_component () = todo "indexed_component"
-and slice () = todo "slice"
-
-and selected_component () =
-  name0() >>= fun prefix ->
-  char '.' >>
-  selector_name >>= fun name ->
-  return @@ prefix ^ "." ^ name
-
-and attribute_reference () = todo "attribute_reference"
-and type_conversion () = todo "type_conversion"
-and character_literal () = todo "character_literal"
-
-and name0 () =
-  direct_name ()
+  identifier <|> operator_symbol
 
 and name () =
-  direct_name ()
-  <|> explicit_dereference ()
-  <|> indexed_component ()
-  <|> slice ()
-  <|> selected_component ()
-  <|> attribute_reference ()
-  <|> type_conversion ()
-(*  <|> function_call TODO 循環？*)
-  <|> character_literal ()
+  direct_name () >>= name_nexts
+  <|> character_literal >>= name_nexts
+
+and name_nexts prevname =
+  (name_next prevname >>= fun n -> name_nexts n)
+  <|> return prevname
+
+and name_next prevname =
+  (*explicit_dereference*)
+  (char '.' >> keyword "all")
+  (*indexed_component*)
+  <|> (char '(' >> sep(char '.')(expression()) << char ')' >>= fun es -> return "indexed_component")
+  (*slice*)
+  (*selected_component*)
+  <|> (char '.' >> selector_name)
+  (*attribute_reference*)
+  (*type_conversion*)
+  (*function_call*)
+
+and expression () : 'a parser = todo "expression"
 
 (** Program Structure and Compilation Issues **)
-let library_unit_name = name () >>= fun s -> print_endline ("lu_name: "^s); return s
+
 
 let with_clause =
+  let library_unit_name =
+    name () >>= fun s -> print_endline ("lu_name: "^s); return s
+  in
   keyword "with" >> white >>
   sep (keyword ",") library_unit_name >>= fun lu_names ->
   white >> keyword ";" >>
   return (lu_names)
 
-let use_clause = todo "use_clause" >> return []
+let use_clause = todo "use_clause"
 
 let context_clause =
   many (with_clause <|> use_clause)
 
 
-let library_item : int ParserMonad.t = error "library_item"
+let library_item : unit parser = error "library_item"
 
 let subunit = error "subunit"
 
-let compilation_unit =
-  context_clause >>= fun cc ->
-  (library_item <|> subunit)
-
-let compilation = many1 compilation_unit (*TODO many1*)
+let compilation =
+  let compilation_unit =
+    context_clause >>= fun cc ->
+    (library_item <|> subunit)
+  in
+  many compilation_unit
 
 let run_ch ch =
-  ParserMonad.run_ch library_unit_name ch
+  ParserMonad.run_ch (with_clause) ch
