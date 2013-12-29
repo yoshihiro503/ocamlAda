@@ -3,3 +3,6 @@ OMakefile.omc
 OMakeroot.omc
 *.cm[ioxa]
 *.o
+
+sample
+sample.opt
