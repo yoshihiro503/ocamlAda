@@ -144,6 +144,10 @@ LIBFILES[] =
 
 LIB = lib
 
+OCAML_LIBS +=
+OCAML_OTHER_LIBS += unix
+OCAMLFLAGS = -annot
+
 $(LIB): $(OCamlLibrary $(LIB), $(LIBFILES))
 
 .DEFAULT: $(LIB)
@@ -161,10 +165,6 @@ FILES[] =
 	sample
 
 PROGRAM = sample
-OCAML_LIBS +=
-# OCAML_CLIBS +=
-OCAML_OTHER_LIBS += unix
-OCAML_FLAGS = -annot
 
 $(PROGRAM): $(OCamlProgram $(PROGRAM), $(FILES))
 
