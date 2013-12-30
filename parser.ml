@@ -10,9 +10,10 @@ type 'a parser = 'a ParserMonad.t
 let map f p = p >>= fun x -> return @@ f x
 let guard b = if b then return () else error "Guard"
 let sep1 s p =
-  p >>= fun x ->
-  many (s >> p) >>= fun xs ->
-  return (x :: xs)
+  p >>= fun x -> many (s >> p) >>= fun xs -> return (x :: xs)
+let sep2 s p =
+  p >>= fun x -> many1 (s >> p) >>= fun xs -> return (x :: xs)
+  
 let (>*<) p1 p2 = p1 >>= fun x -> p2 >>= fun y -> return (x,y)
 
 let todo s : 'a ParserMonad.t = print_endline ("TODO: "^s); error s
@@ -39,6 +40,10 @@ let token p =
 
 let token_char c = token (char c)
 let token_word w = token (keyword w)
+
+let popen = token_char '('
+let pclose = token_char ')'
+let comma = token_char ','
 
 (**  Lexical Elements **)
 let digit =
@@ -151,7 +156,45 @@ and attribute_designator () : attribute parser =
   <|> (identifier >>= fun ident ->
    opt (token_char '(' >> expression() << token_char ')') >>= fun e ->
    return @@ AIdent(ident, e))
-    
+
+and array_aggregate () =
+  let array_component_associtiation () =
+    discrete_choice_list() >>= fun dcs -> token_word "=>" >>
+    expression() >>= fun e -> return @@ (dcs, e)
+  in
+  (*positional_array_aggregate*)
+  (token_char '(' >> sep2 (token_char ',') (expression()) >>= fun es ->
+   token_char ')' >> return @@ ArrayAgPos es)
+  <|> (token_char '(' >> sep1 (token_char ',') (expression()) >>= fun es ->
+       token_char ',' >> token_word "others" >> token_word "=>" >>
+       expression() >>= fun oe ->
+       token_char ')' >> return @@ ArrayAgPosOthers (es,oe))
+  (*named_array_aggregate*)
+  <|> (token_char '(' >> sep1 (token_char ',') (array_component_associtiation())
+       << token_char ')' >>= fun cs ->
+       return @@ ArrayAgNamed cs)
+
+and aggregate () =
+  let record_component_association () =
+    let component_choice_list =
+      (token_word "others" >> return CCLOthers)
+      <|> (sep(token_char '|') selector_name >>= fun ns -> return @@ CCLSels ns)
+    in
+    opt (component_choice_list << token_word "=>") >*< expression()
+  in
+  let ancestor_part = expression in
+  let nullrec = token_word"null">> token_word"record">> return AgNullRecord in
+  (*record_aggregate*)
+  (token_char '(' >> sep1 (token_char ',') (record_component_association())
+   << token_char ')' >>= fun cs -> return @@ AgRecord cs)
+  <|> nullrec
+  (*extension_aggregate*)
+  <|> (token_char '(' >> ancestor_part() << token_word "with" >>= fun anc ->
+       begin nullrec
+       <|> (sep1 (token_char ',') (record_component_association()) >>= fun cs->
+            return @@ AgExtension(anc, cs))
+       end << token_char ')')
+  (*array_aggregate*)
 
 and primary () =
   (numeric_literal >>= fun num -> return @@ PNum num)

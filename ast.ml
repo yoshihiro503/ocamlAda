@@ -25,7 +25,20 @@ and subtype_mark = name
 and attribute =
   | AIdent of string * expression option
   | AAccess | ADelta | ADigit
-and aggregate = unit(*TODO*)
+and comp_choice_list =
+  | CCLOthers
+  | CCLSels of selector_name list
+and record_comp_assoc = comp_choice_list option * expression
+and discrete_choice = unit(*TODO*)
+and array_aggregate =
+  | ArrayAgPos of expression list
+  | ArrayAgPosOthers of expression list * expression
+  | ArrayAgNamed of (discrete_choice list * expression) list
+and aggregate =
+  | AgNullRecord
+  | AgRecord of record_comp_assoc list
+  | AgExtension of expression * record_comp_assoc list
+  | AgArray of array_aggregate
 and allocator = unit(*TODO*)
 and qualified_expr =
   | QExpr of subtype_mark * expression
