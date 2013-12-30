@@ -5,6 +5,10 @@ open ParserMonad
 type 'a parser = 'a ParserMonad.t
 
 let guard b = if b then return () else error "Guard"
+let sep1 s p =
+  p >>= fun x ->
+  many (s >> p) >>= fun xs ->
+  return (x :: xs)
 
 let todo s : 'a ParserMonad.t = print_endline ("TODO: "^s); error s
 
@@ -79,11 +83,18 @@ let string_literal =
 
 let operator_symbol = string_literal
 
-(** 4. Names and Expressions **)
-let selector_name =
+(**=====**)
+let selector_name = (* sec. 4 *)
   identifier <|> character_literal <|> operator_symbol
+(**=====**)
 
-let rec direct_name () =
+(** 3. Declarations and Types **)
+let rec basic_declaration () = todo "basic_declaration"
+
+and subtype_mark () = name ()
+
+(** 4. Names and Expressions **)
+and direct_name () =
   identifier <|> operator_symbol
 
 and name () =
@@ -98,7 +109,7 @@ and name_next prevname =
   (*explicit_dereference*)
   (token_char '.' >> keyword "all")
   (*indexed_component*)
-  <|> (token_char '(' >> sep(token_char '.')(expression()) << token_char ')' >>= fun es -> return "indexed_component")
+  <|> (token_char '(' >> sep1(token_char '.')(expression()) << token_char ')' >>= fun es -> return "indexed_component")
   (*slice*)
   (*selected_component*)
   <|> (token_char '.' >> selector_name)
@@ -108,19 +119,28 @@ and name_next prevname =
 
 and expression () : 'a parser = todo "expression"
 
-(** Program Structure and Compilation Issues **)
+
+(** 8. **)
+let package_name = name() ^?"package_name" >>= fun s -> print_endline ("package_name: "^s); return s
+
+let use_clause =
+  token_word "use" >>
+  begin
+    sep1 (token_char ',') package_name
+    <|> (token_word "type" >> sep1 (token_char ',') (subtype_mark ()))
+  end << token_char ';'
+  
 
 
+(** 10. Program Structure and Compilation Issues **)
 let with_clause =
   let library_unit_name =
     name () >>= fun s -> print_endline ("lu_name: "^s); return s
   in
   token_word "with" >>
-  sep (token_char ',') library_unit_name >>= fun lu_names ->
+  sep1 (token_char ',') library_unit_name >>= fun lu_names ->
   token_char ';' >>
   return (lu_names)
-
-let use_clause = todo "use_clause"
 
 let context_clause =
   many (with_clause <|> use_clause)
@@ -138,4 +158,4 @@ let compilation =
   many compilation_unit
 
 let run_ch ch =
-  ParserMonad.run_ch (with_clause) ch
+  ParserMonad.run_ch (compilation) ch
