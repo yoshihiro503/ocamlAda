@@ -47,7 +47,7 @@ and primary =
   | PNum of numeric
   | PNull
   | PString of string
-  | PAggretgate of aggregate
+  | PAggregate of aggregate
   | PName of name
   | PQualifedExpr of qualified_expr
   | PAllocator of allocator

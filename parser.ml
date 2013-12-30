@@ -198,12 +198,13 @@ and aggregate () =
             return @@ AgExtension(anc, cs))
        end << pclose)
   (*array_aggregate*)
+  <|> (array_aggregate() >>= fun aa -> return @@ AgArray aa)
 
 and primary () =
   (numeric_literal >>= fun num -> return @@ PNum num)
   <|> (token_word "null" >> return @@ PNull)
   <|> (string_literal >>= fun s -> return @@ PString s)
-(*  <|> TODO: aggregate *)
+  <|> (aggregate() >>= fun a -> return @@ PAggregate a)
   <|> (name() >>= fun n -> return @@ PName n)
 (*  <|> TODO: qual expr *)
 (*  <|> TODO: allocator *)
