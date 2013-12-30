@@ -1,8 +1,13 @@
 *~
 OMakefile.omc
 OMakeroot.omc
+.omakedb
+.omakedb.lock
 *.cm[ioxa]
+*.cmxa
 *.o
+*.a
 
 sample
 sample.opt
+sample.run
