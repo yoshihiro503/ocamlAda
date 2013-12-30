@@ -42,13 +42,10 @@ let digit =
 let identifier_letter =
   char_when (function | 'a'..'z' | 'A'..'Z' -> true | _ -> false)
 
-let identifier_letter2 =
-  identifier_letter <|> char '_' <|> digit
-
 let identifier =
   token begin
     identifier_letter >>= fun c1 ->
-    many identifier_letter2 >>= fun cs ->
+    many (identifier_letter <|> char '_' <|> digit) >>= fun cs ->
     return @@ string_of_chars (c1::cs)
   end
 
@@ -82,6 +79,8 @@ let operator_symbol = string_literal
 (**=====**)
 let selector_name = (* sec. 4 *)
   identifier <|> character_literal <|> operator_symbol
+let direct_name =
+  identifier <|> operator_symbol
 (**=====**)
 
 (** 3. Declarations and Types **)
@@ -112,28 +111,25 @@ and discrete_choice_list () = todo "discrete_choice_list"
 and discrete_choice () = todo "discrete_choice"
 
 (** 4. Names and Expressions **)
-and direct_name () =
-  identifier <|> operator_symbol
-
 and name () =
-  direct_name () >>= name_nexts
+  let name_next prevname =
+    (*explicit_dereference*)
+    (token_char '.' >> keyword "all")
+    (*indexed_component*)
+    <|> (token_char '(' >> sep1(token_char '.')(expression()) << token_char ')' >>= fun es -> return "indexed_component")
+    (*slice*)
+    (*selected_component*)
+    <|> (token_char '.' >> selector_name)
+    (*attribute_reference*)
+    (*type_conversion*)
+    (*function_call*)
+  in
+  let rec name_nexts prevname =
+    (name_next prevname >>= fun n -> name_nexts n)
+    <|> return prevname
+  in
+  direct_name >>= name_nexts
   <|> character_literal >>= name_nexts
-
-and name_nexts prevname =
-  (name_next prevname >>= fun n -> name_nexts n)
-  <|> return prevname
-
-and name_next prevname =
-  (*explicit_dereference*)
-  (token_char '.' >> keyword "all")
-  (*indexed_component*)
-  <|> (token_char '(' >> sep1(token_char '.')(expression()) << token_char ')' >>= fun es -> return "indexed_component")
-  (*slice*)
-  (*selected_component*)
-  <|> (token_char '.' >> selector_name)
-  (*attribute_reference*)
-  (*type_conversion*)
-  (*function_call*)
 
 and expression () : 'a parser = todo "expression"
 

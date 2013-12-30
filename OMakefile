@@ -25,7 +25,7 @@
 # Phony targets are scoped, so you probably want to declare them first.
 #
 
-# .PHONY: all install clean
+.PHONY: all install clean sample lib
 
 ########################################################################
 # Subdirectories.
@@ -111,7 +111,7 @@
 # The default values are defined as follows:
 #
 # NATIVE_ENABLED = $(OCAMLOPT_EXISTS)
-# BYTE_ENABLED = $(not $(OCAMLOPT_EXISTS))
+BYTE_ENABLED = true
 
 #
 # Various options
@@ -135,13 +135,15 @@
 # Build an OCaml library
 #
 
-# FILES[] =
-#    file1
-#    file2
-#
-# LIB = main
-#
-# .DEFAULT: $(OCamlLibrary $(LIB), $(FILES))
+LIBFILES[] =
+	util
+	llist
+	parserMonad
+	parser
+
+LIB = lib
+
+$(LIB): $(OCamlLibrary $(LIB), $(LIBFILES))
 
 ################################################
 # Build an OCaml program
@@ -160,4 +162,4 @@ OCAML_LIBS +=
 OCAML_OTHER_LIBS += unix
 # OCAML_LIB_FLAGS +=
 #
-.DEFAULT: $(OCamlProgram $(PROGRAM), $(FILES))
+$(PROGRAM): $(OCamlProgram $(PROGRAM), $(FILES))
