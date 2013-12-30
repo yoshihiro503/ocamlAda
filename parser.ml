@@ -89,6 +89,8 @@ let selector_name = (* sec. 4 *)
 (**=====**)
 
 (** 3. Declarations and Types **)
+let defining_identifier = identifier
+
 let rec basic_declaration () = todo "basic_declaration"
 
 and subtype_mark () = name ()
@@ -119,6 +121,49 @@ and name_next prevname =
 
 and expression () : 'a parser = todo "expression"
 
+(** 6. Subprograms **)
+
+(**======from 10 **)
+let parent_unit_name = name ()
+(**======from 10 **)
+
+let defining_program_unit_name =
+  opt (parent_unit_name << token_char '.') >>= fun parent ->
+  defining_identifier
+
+let defining_designator : unit parser = todo "defining_designator"
+let formal_part : unit parser = todo "formal_part"
+
+let subprogram_specification =
+  (token_word "procedure" >> defining_program_unit_name >>= fun dpuname ->
+    opt formal_part >>= fun formal -> return dpuname)
+  <|> (token_word "function" >> defining_designator >>= fun def ->
+    opt formal_part >>= fun formal -> token_word "return" >> (subtype_mark()))
+
+(**========from 2**)
+let declarative_part : unit parser = todo "declarative_part"
+(**========from 2**)
+
+(**========from 11**)
+let handled_sequence_of_statements : unit parser = todo "handled_sequence_of_statements"
+(**========from 11**)
+
+let designator: unit parser = todo "designator"
+
+let subprogram_body =
+  subprogram_specification >>= fun spec ->
+  token_word "is" >>
+  declarative_part >>= fun decl ->
+  token_word "begin" >>
+  handled_sequence_of_statements >>= fun stats ->
+  token_word "end" >>
+  opt designator >>= fun design ->
+  token_char ';' >>
+  return stats
+
+(** 7. Packages **)
+
+let package_body = todo "package_body"
 
 (** 8. **)
 let package_name = name() ^?"package_name" >>= fun s -> print_endline ("package_name: "^s); return s
@@ -145,13 +190,24 @@ let with_clause =
 let context_clause =
   many (with_clause <|> use_clause)
 
-
-let library_item : unit parser = error "library_item"
+let library_unit_declaration : unit parser = todo "library_unit_declaration"
 
 let subunit = error "subunit"
 
 let compilation =
   let compilation_unit =
+    let library_item =
+      let library_unit_declaration:unit parser = todo "library_unti_declaration" in
+      let library_unit_body =
+        subprogram_body <|> package_body
+      in
+      let library_unit_renaming_declaration =
+        todo "library_unit_renaming_declaration"
+      in
+      (opt (token_word "private") >>= fun private_ -> library_unit_declaration)
+      <|> library_unit_body
+      <|> (opt (token_word "private") >>= fun private_ -> library_unit_renaming_declaration)
+    in
     context_clause >>= fun cc ->
     (library_item <|> subunit)
   in
