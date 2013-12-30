@@ -114,9 +114,9 @@ let char1 = _char1_with_debug
 
 let char_when f = char1 >>= fun c ->
   if f c then return c
-  else error (!%"(expected char:'%c')" c)
+  else error (!%"(char_when at:'%c')" c)
 
-let char c = char_when ((=) c)
+let char c = char_when ((=) c) ^? (!%"char '%c'" c)
 
 let keyword w =
   let rec iter i =
@@ -141,7 +141,9 @@ let int =
 
 let run p state ts =
   match p state ts with
-  | Inl (x,_state',_xs) -> x
+  | Inl (x,_state',_xs) ->
+      print_endline (showerr (_state', "Success"));
+      x
   | Inr err -> 
       raise (ParseError (showerr err))
 

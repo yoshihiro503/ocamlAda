@@ -139,6 +139,7 @@ LIBFILES[] =
 	util
 	llist
 	parserMonad
+	ast
 	parser
 
 LIB = lib
@@ -154,6 +155,7 @@ FILES[] =
 	llist
 	parserMonad
 	parser
+	ast
 	sample
 
 PROGRAM = sample

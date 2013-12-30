@@ -1,6 +1,9 @@
 (** SEE: http://cui.unige.ch/isi/bnf/Ada95/BNFindex.html **)
 open Util
 open ParserMonad
+open Ast
+
+let is_some = function Some _ -> true | None -> false
 
 type 'a parser = 'a ParserMonad.t
 
@@ -9,12 +12,13 @@ let sep1 s p =
   p >>= fun x ->
   many (s >> p) >>= fun xs ->
   return (x :: xs)
+let (>*<) p1 p2 = p1 >>= fun x -> p2 >>= fun y -> return (x,y)
 
 let todo s : 'a ParserMonad.t = print_endline ("TODO: "^s); error s
 
 module SpecialChar = struct
   let space = char ' '
-  let iso_10646_BMP = todo "ISO 10646 BMP"
+  let iso_10646_BMP = char_when ((<>) '\"')
   let quotation = char '\'' <|>  char '\"'
 end
 
@@ -76,6 +80,7 @@ let string_literal =
 
 let operator_symbol = string_literal
 
+let numeric_literal = todo "numeric_literal"
 (**=====**)
 let selector_name = (* sec. 4 *)
   identifier <|> character_literal <|> operator_symbol
@@ -131,7 +136,97 @@ and name () =
   direct_name >>= name_nexts
   <|> character_literal >>= name_nexts
 
-and expression () : 'a parser = todo "expression"
+and primary () =
+  (numeric_literal >>= fun num -> return @@ PNum num)
+  <|> (token_word "null" >> return @@ PNull)
+  <|> (string_literal >>= fun s -> return @@ PString s)
+(*  <|> TODO: aggregate *)
+  <|> (name() >>= fun n -> return @@ PName n)
+(*  <|> TODO: qual expr *)
+(*  <|> TODO: allocator *)
+  <|> (token_char '(' >> expression() << token_char ')' >>= fun e ->
+       return @@ PParen e)
+
+and factor () =
+  let pop = token_word "**" >> return Pow in
+  (token_word "abs" >> primary() >>= fun p -> return @@ FAbs p)
+  <|> (token_word "not" >> primary() >>= fun p -> return @@ FNot p)
+  <|> (primary() >>= fun p -> many (pop >*< primary()) >>= fun pps ->
+       return @@ FPow(p, pps))
+
+and term () =
+  let mop = (token_char '*' >> return Mult) <|> (token_char '/' >> return Div) (*TODO*)
+  in
+  factor() >>= fun f -> many (mop >*< factor()) >>= fun mfs ->
+  return @@ Term(f, mfs)
+
+and simple_expression () =
+  let plusminus =
+    (token_char '+' >> return Plus) <|> (token_char '-' >> return Minus)
+  in
+  let aop =
+    (token_char '+' >> return Add) <|> (token_char '-' >> return Sub)
+    <|> (token_char '&' >> return BitAnd)
+  in
+  opt plusminus >>= fun pm -> term() >>= fun t -> many (aop >*< term()) >>= fun ats -> return @@ SE(pm, t, ats)
+    
+and relation () =
+  let aop =
+    (token_char '=' >> return Eq) <|> (token_word "/=" >> return Neq)
+    <|> (token_char '<' >> return Lt) (*TODO*)
+  in
+  (simple_expression() >>= fun se -> opt (token_word "not") >>= fun not ->
+  token_word "in" >> begin
+    (range() >>= fun range -> return @@ RInRange(is_some not, se, range))
+    <|> (subtype_mark() >>= fun smark -> return @@ RInSubMark(is_some not, se, smark))
+  end)
+  <|> (simple_expression() >>= fun se ->
+       many (aop >*< simple_expression()) >>= fun ses -> return @@ RE(se, ses))
+
+and expression () : expression parser =
+  (sep (token_word "and") (relation ()) >>= fun rs -> return @@ EAnd rs)
+  <|> (sep (token_word "and" >> token_word "then") (relation ()) >>= fun rs ->
+       return @@ EAnd rs)
+  <|> (sep (token_word "or") (relation ()) >>= fun rs -> return @@ EOr rs)
+  <|> (sep (token_word "or" >> token_word "else") (relation ()) >>= fun rs ->
+       return @@ EOr rs)
+  <|> (sep (token_word "xor") (relation ()) >>= fun rs -> return @@ EXor rs)
+  
+(** 5. Statements **)
+
+(**=============6*)
+let parameter_assoc =
+  opt (selector_name << token_word "=>") >>= fun sel ->
+  expression() >>= fun expr ->
+  return (sel, expr)
+let actual_parameter_part =
+  token_char '(' >>
+  sep1 (token_char ',') parameter_assoc
+  << token_char ')'
+(**=============6*)
+
+let simple_statement =
+  (* TODO null *)
+  (* TODO assignment *)
+  (* TODO exit *)
+  (* TODO goto *)
+  (name() ^?"name">>= fun n -> opt actual_parameter_part ^?"parms" << token_char ';' >>= fun ps ->
+   return @@ StProcCall(n, ps)) ^?"StProcCall"
+  (* TODO return *)
+  (* TODO entry *)
+  (* TODO requeue *)
+  (* TODO delay *)
+  (* TODO abort *)
+  (* TODO raise *)
+  (* TODO code *)
+
+let compound_statement = todo "compound_statement"
+let label : unit parser = todo "label"
+let statement =
+  many label >>= fun ls ->
+  (simple_statement <|> compound_statement)
+let sequence_of_statements =
+  many1 statement
 
 (** 6. Subprograms **)
 
@@ -152,15 +247,28 @@ let subprogram_specification =
   <|> (token_word "function" >> defining_designator >>= fun def ->
     opt formal_part >>= fun formal -> token_word "return" >> (subtype_mark()))
 
-(**========from 2**)
-let declarative_part : unit parser = todo "declarative_part"
-(**========from 2**)
+(**========from 3**)
+let basic_declarative_item : unit parser = todo "basic_declarative_item"
+let body = todo "body"
+let declarative_part =
+  many (basic_declarative_item <|> body)
+(**========from 3**)
+
+(**========from 10**)
+let parent_unit_name = name ()
+(**========from 10**)
 
 (**========from 11**)
-let handled_sequence_of_statements : unit parser = todo "handled_sequence_of_statements"
+let exception_handler : unit parser = todo "exception_handler"
+let handled_sequence_of_statements =
+  sequence_of_statements >>= fun stats ->
+  opt (token_word "exception" >> many1 exception_handler) >>= fun exc ->
+  return @@ HandledStatements(stats, exc)
 (**========from 11**)
 
-let designator: unit parser = todo "designator"
+let designator =
+  opt (parent_unit_name << token_char '.') >>= fun n ->
+  (identifier <|> operator_symbol)
 
 let subprogram_body =
   subprogram_specification >>= fun spec ->
@@ -209,8 +317,8 @@ let subunit = error "subunit"
 let compilation =
   let compilation_unit =
     let library_item =
-      let library_unit_declaration:unit parser = todo "library_unti_declaration" in
-      let library_unit_body =
+      let library_unit_declaration: handled_statements parser = todo "library_unit_declaration" in
+      let library_unit_body : handled_statements parser =
         subprogram_body <|> package_body
       in
       let library_unit_renaming_declaration =
@@ -227,3 +335,4 @@ let compilation =
 
 let run_ch ch =
   ParserMonad.run_ch (compilation) ch
+
