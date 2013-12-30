@@ -39,10 +39,6 @@ let token_word w = token (keyword w)
 let digit =
   char_when (function | '0'..'9' -> true | _ -> false)
 
-    
-  
-
-
 let identifier_letter =
   char_when (function | 'a'..'z' | 'A'..'Z' -> true | _ -> false)
 
@@ -91,9 +87,29 @@ let selector_name = (* sec. 4 *)
 (** 3. Declarations and Types **)
 let defining_identifier = identifier
 
-let rec basic_declaration () = todo "basic_declaration"
+let rec subtype_indication () = todo "subtype_indication"
 
 and subtype_mark () = name ()
+
+and constraint_ () = todo "constraint"
+
+and range_constraint () = todo "range_constraint"
+
+and range () = todo "range"
+
+and digits_constraint () = todo "digits_constraint"
+
+and index_constraint() = todo "index_constraint"
+
+and discrete_range () = todo "discrete_range"
+
+and discriminant_constraint () = todo "discriminant_constraint"
+
+and discriminant_association () = todo "discriminant_association"
+
+and discrete_choice_list () = todo "discrete_choice_list"
+
+and discrete_choice () = todo "discrete_choice"
 
 (** 4. Names and Expressions **)
 and direct_name () =
