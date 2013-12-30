@@ -7,6 +7,7 @@ let is_some = function Some _ -> true | None -> false
 
 type 'a parser = 'a ParserMonad.t
 
+let map f p = p >>= fun x -> return @@ f x
 let guard b = if b then return () else error "Guard"
 let sep1 s p =
   p >>= fun x ->
@@ -19,7 +20,7 @@ let todo s : 'a ParserMonad.t = print_endline ("TODO: "^s); error s
 module SpecialChar = struct
   let space = char ' '
   let iso_10646_BMP = char_when ((<>) '\"')
-  let quotation = char '\'' <|>  char '\"'
+  let quotation = char '\"'
 end
 
 let white1 =
@@ -60,9 +61,8 @@ let graphic_character =
 let character_literal =
   token begin
     char '\'' >>
-    graphic_character >>= fun c ->
-    char '\'' >>
-    return @@ String.make 1 c
+    graphic_character
+    << char '\''
   end
 
 let string_literal =
@@ -71,10 +71,9 @@ let string_literal =
     <|> graphic_character
   in
   token begin
-    SpecialChar.quotation >>= fun q1 ->
+    SpecialChar.quotation >>
     many string_element >>= fun cs ->
-    SpecialChar.quotation >>= fun q2 ->
-    guard (q1 = q2) >>
+    SpecialChar.quotation >>
     return @@ string_of_chars cs
   end
 
@@ -83,7 +82,7 @@ let operator_symbol = string_literal
 let numeric_literal = todo "numeric_literal"
 (**=====**)
 let selector_name = (* sec. 4 *)
-  identifier <|> character_literal <|> operator_symbol
+  identifier <|> (character_literal |> map (String.make 1)) <|> operator_symbol
 let direct_name =
   identifier <|> operator_symbol
 (**=====**)
@@ -117,24 +116,41 @@ and discrete_choice () = todo "discrete_choice"
 
 (** 4. Names and Expressions **)
 and name () =
-  let name_next prevname =
+  let name_next prefix =
     (*explicit_dereference*)
-    (token_char '.' >> keyword "all")
+    (token_char '.' >> keyword "all" >> return @@ NExplicitDeref prefix)
     (*indexed_component*)
-    <|> (token_char '(' >> sep1(token_char '.')(expression()) << token_char ')' >>= fun es -> return "indexed_component")
+    <|> (token_char '(' >> sep1(token_char '.')(expression()) << token_char ')' >>= fun es -> return @@ NIndexedComp(prefix, es))
     (*slice*)
+    <|> (token_char '(' >> discrete_range() << token_char ')' >>= fun dr ->
+         return @@ NSlice(prefix, dr))
     (*selected_component*)
-    <|> (token_char '.' >> selector_name)
+    <|> (token_char '.' >> selector_name >>= fun sel ->
+         return @@ NSelectedComp(prefix, sel))
     (*attribute_reference*)
+    <|> (token_char '\'' >> attribute_designator() >>= fun attr ->
+         return @@ NAttrRef(prefix, attr))
     (*type_conversion*)
     (*function_call*)
+(*  | NTypeConv of subtype_mark * expression
+  | NFunCall of name * param_assoc list option*)
+(*    <|> return prefix*)
   in
   let rec name_nexts prevname =
     (name_next prevname >>= fun n -> name_nexts n)
     <|> return prevname
   in
-  direct_name >>= name_nexts
-  <|> character_literal >>= name_nexts
+  (direct_name >>= fun d -> name_nexts (NDirect d))
+  <|> (character_literal >>= fun c -> name_nexts (NChar c))
+
+and attribute_designator () : attribute parser =
+  (token_word "Access" >> return AAccess)
+  <|> (token_word "Delta" >> return ADelta)
+  <|> (token_word "Digit" >> return ADigit)
+  <|> (identifier >>= fun ident ->
+   opt (token_char '(' >> expression() << token_char ')') >>= fun e ->
+   return @@ AIdent(ident, e))
+    
 
 and primary () =
   (numeric_literal >>= fun num -> return @@ PNum num)
@@ -184,13 +200,13 @@ and relation () =
        many (aop >*< simple_expression()) >>= fun ses -> return @@ RE(se, ses))
 
 and expression () : expression parser =
-  (sep (token_word "and") (relation ()) >>= fun rs -> return @@ EAnd rs)
-  <|> (sep (token_word "and" >> token_word "then") (relation ()) >>= fun rs ->
+  (sep1 (token_word "and") (relation ()) >>= fun rs -> return @@ EAnd rs)
+  <|> (sep1 (token_word "and" >> token_word "then") (relation ()) >>= fun rs ->
        return @@ EAnd rs)
-  <|> (sep (token_word "or") (relation ()) >>= fun rs -> return @@ EOr rs)
-  <|> (sep (token_word "or" >> token_word "else") (relation ()) >>= fun rs ->
+  <|> (sep1 (token_word "or") (relation ()) >>= fun rs -> return @@ EOr rs)
+  <|> (sep1 (token_word "or" >> token_word "else") (relation ()) >>= fun rs ->
        return @@ EOr rs)
-  <|> (sep (token_word "xor") (relation ()) >>= fun rs -> return @@ EXor rs)
+  <|> (sep1 (token_word "xor") (relation ()) >>= fun rs -> return @@ EXor rs)
   
 (** 5. Statements **)
 
@@ -244,8 +260,9 @@ let formal_part : unit parser = todo "formal_part"
 let subprogram_specification =
   (token_word "procedure" >> defining_program_unit_name >>= fun dpuname ->
     opt formal_part >>= fun formal -> return dpuname)
-  <|> (token_word "function" >> defining_designator >>= fun def ->
+(*TODO  <|> (token_word "function" >> defining_designator >>= fun def ->
     opt formal_part >>= fun formal -> token_word "return" >> (subtype_mark()))
+*)
 
 (**========from 3**)
 let basic_declarative_item : unit parser = todo "basic_declarative_item"
@@ -286,7 +303,7 @@ let subprogram_body =
 let package_body = todo "package_body"
 
 (** 8. **)
-let package_name = name() ^?"package_name" >>= fun s -> print_endline ("package_name: "^s); return s
+let package_name = name() ^?"package_name"
 
 let use_clause =
   token_word "use" >>
@@ -299,9 +316,7 @@ let use_clause =
 
 (** 10. Program Structure and Compilation Issues **)
 let with_clause =
-  let library_unit_name =
-    name () >>= fun s -> print_endline ("lu_name: "^s); return s
-  in
+  let library_unit_name = name () in
   token_word "with" >>
   sep1 (token_char ',') library_unit_name >>= fun lu_names ->
   token_char ';' >>

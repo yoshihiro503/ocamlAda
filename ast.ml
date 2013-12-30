@@ -3,19 +3,30 @@ open Util
 type selector_name = string
 type direct_name = string
 
-type name = string
-type subtype_mark = name
-
 type plusminus = Plus | Minus
 type aop = Add | Sub | BitAnd
 type mop = Mult | Div | Mod | Rem
 type pop = Pow
 type eop = Eq | Neq | Lt | Lte | Gt | Gte
 
-type numeric = unit
+type numeric = unit(*TODO*)
 
-type aggregate = unit
-and allocator = unit
+type name =
+  | NDirect of direct_name
+  | NChar of char
+  | NExplicitDeref of name
+  | NIndexedComp of name * expression list
+  | NSlice of name * discrete_range
+  | NSelectedComp of name * selector_name
+  | NAttrRef of name * attribute
+  | NTypeConv of subtype_mark * expression
+  | NFunCall of name * param_assoc list option
+and subtype_mark = name
+and attribute =
+  | AIdent of string * expression option
+  | AAccess | ADelta | ADigit
+and aggregate = unit(*TODO*)
+and allocator = unit(*TODO*)
 and qualified_expr =
   | QExpr of subtype_mark * expression
   | QAggr of subtype_mark * aggregate
@@ -36,7 +47,11 @@ and term =
   | Term of factor * (mop * factor) list
 and simple_expr =
   | SE of plusminus option * term * (aop * term) list
-and range = unit
+and range = unit(*TODO*)
+and subtype_ind = subtype_mark * constraint_ option
+and constraint_ = unit(*TODO*)
+and discrete_range =
+  | DrSubtype of subtype_ind | DrRange of range
 and relation =
   | RE  of simple_expr * (eop * simple_expr) list
   | RInRange of bool * simple_expr * range
@@ -45,13 +60,13 @@ and expression =
   | EAnd of relation list
   | EOr of relation list
   | EXor of relation list
+and param_assoc = selector_name option * expression
 
-type param_assoc = selector_name option * expression
 type statement =
 (*TODO*)
   | StProcCall of name * param_assoc list option
 (*TODO*)
 
-type exc_handler = unit
+type exc_handler = unit(*TODO*)
 type handled_statements =
   | HandledStatements of statement list * exc_handler list option
