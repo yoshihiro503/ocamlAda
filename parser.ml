@@ -13,6 +13,7 @@ let sep1 s p =
   p >>= fun x -> many (s >> p) >>= fun xs -> return (x :: xs)
 let sep2 s p =
   p >>= fun x -> many1 (s >> p) >>= fun xs -> return (x :: xs)
+let sep = ()
   
 let (>*<) p1 p2 = p1 >>= fun x -> p2 >>= fun y -> return (x,y)
 
@@ -44,6 +45,8 @@ let token_word w = token (keyword w)
 let popen = token_char '('
 let pclose = token_char ')'
 let comma = token_char ','
+let comsep1 p = sep1 comma p
+let comsep2 p = sep2 comma p
 
 (**  Lexical Elements **)
 let digit =
@@ -125,9 +128,9 @@ and name () =
     (*explicit_dereference*)
     (token_char '.' >> keyword "all" >> return @@ NExplicitDeref prefix)
     (*indexed_component*)
-    <|> (token_char '(' >> sep1(token_char '.')(expression()) << token_char ')' >>= fun es -> return @@ NIndexedComp(prefix, es))
+    <|> (popen >> sep1(token_char '.')(expression()) << pclose >>= fun es -> return @@ NIndexedComp(prefix, es))
     (*slice*)
-    <|> (token_char '(' >> discrete_range() << token_char ')' >>= fun dr ->
+    <|> (popen >> discrete_range() << pclose >>= fun dr ->
          return @@ NSlice(prefix, dr))
     (*selected_component*)
     <|> (token_char '.' >> selector_name >>= fun sel ->
@@ -136,7 +139,7 @@ and name () =
     <|> (token_char '\'' >> attribute_designator() >>= fun attr ->
          return @@ NAttrRef(prefix, attr))
     (*type_conversion*)
-    <|> (token_char '(' >> expression() >>= fun expr ->
+    <|> (popen >> expression() >>= fun expr ->
          return @@ NTypeConv (prefix, expr))
     (*function_call*) (*仕様では(params)がない場合も規定しているが、実際それはnameと区別できない。*)
     <|> (actual_parameter_part() >>= fun params ->
@@ -154,7 +157,7 @@ and attribute_designator () : attribute parser =
   <|> (token_word "Delta" >> return ADelta)
   <|> (token_word "Digit" >> return ADigit)
   <|> (identifier >>= fun ident ->
-   opt (token_char '(' >> expression() << token_char ')') >>= fun e ->
+   opt (popen >> expression() << pclose) >>= fun e ->
    return @@ AIdent(ident, e))
 
 and array_aggregate () =
@@ -163,37 +166,37 @@ and array_aggregate () =
     expression() >>= fun e -> return @@ (dcs, e)
   in
   (*positional_array_aggregate*)
-  (token_char '(' >> sep2 (token_char ',') (expression()) >>= fun es ->
-   token_char ')' >> return @@ ArrayAgPos es)
-  <|> (token_char '(' >> sep1 (token_char ',') (expression()) >>= fun es ->
-       token_char ',' >> token_word "others" >> token_word "=>" >>
+  (popen >> comsep2 (expression()) >>= fun es ->
+   pclose >> return @@ ArrayAgPos es)
+  <|> (popen >> comsep1 (expression()) >>= fun es ->
+       comma >> token_word "others" >> token_word "=>" >>
        expression() >>= fun oe ->
-       token_char ')' >> return @@ ArrayAgPosOthers (es,oe))
+       pclose >> return @@ ArrayAgPosOthers (es,oe))
   (*named_array_aggregate*)
-  <|> (token_char '(' >> sep1 (token_char ',') (array_component_associtiation())
-       << token_char ')' >>= fun cs ->
+  <|> (popen >> comsep1 (array_component_associtiation())
+       << pclose >>= fun cs ->
        return @@ ArrayAgNamed cs)
 
 and aggregate () =
   let record_component_association () =
     let component_choice_list =
       (token_word "others" >> return CCLOthers)
-      <|> (sep(token_char '|') selector_name >>= fun ns -> return @@ CCLSels ns)
+      <|> (sep1(token_char '|')selector_name >>= fun ns -> return @@ CCLSels ns)
     in
     opt (component_choice_list << token_word "=>") >*< expression()
   in
   let ancestor_part = expression in
   let nullrec = token_word"null">> token_word"record">> return AgNullRecord in
   (*record_aggregate*)
-  (token_char '(' >> sep1 (token_char ',') (record_component_association())
-   << token_char ')' >>= fun cs -> return @@ AgRecord cs)
+  (popen >> comsep1 (record_component_association())
+   << pclose >>= fun cs -> return @@ AgRecord cs)
   <|> nullrec
   (*extension_aggregate*)
-  <|> (token_char '(' >> ancestor_part() << token_word "with" >>= fun anc ->
+  <|> (popen >> ancestor_part() << token_word "with" >>= fun anc ->
        begin nullrec
-       <|> (sep1 (token_char ',') (record_component_association()) >>= fun cs->
+       <|> (comsep1 (record_component_association()) >>= fun cs->
             return @@ AgExtension(anc, cs))
-       end << token_char ')')
+       end << pclose)
   (*array_aggregate*)
 
 and primary () =
@@ -204,7 +207,7 @@ and primary () =
   <|> (name() >>= fun n -> return @@ PName n)
 (*  <|> TODO: qual expr *)
 (*  <|> TODO: allocator *)
-  <|> (token_char '(' >> expression() << token_char ')' >>= fun e ->
+  <|> (popen >> expression() << pclose >>= fun e ->
        return @@ PParen e)
 
 and factor () =
@@ -258,9 +261,9 @@ and parameter_assoc () =
   expression() >>= fun expr ->
   return (sel, expr)
 and actual_parameter_part () =
-  token_char '(' >>
-  sep1 (token_char ',') (parameter_assoc())
-  << token_char ')'
+  popen >>
+  comsep1 (parameter_assoc())
+  << pclose
 (**=============6*)
   
 (** 5. Statements **)
@@ -353,8 +356,8 @@ let package_name = name() ^?"package_name"
 let use_clause =
   token_word "use" >>
   begin
-    sep1 (token_char ',') package_name
-    <|> (token_word "type" >> sep1 (token_char ',') (subtype_mark ()))
+    comsep1 package_name
+    <|> (token_word "type" >> comsep1 (subtype_mark ()))
   end << token_char ';'
   
 
@@ -363,7 +366,7 @@ let use_clause =
 let with_clause =
   let library_unit_name = name() in
   token_word "with" >>
-  sep1 (token_char ',') library_unit_name >>= fun lu_names ->
+  comsep1 library_unit_name >>= fun lu_names ->
   token_char ';' >>
   return (lu_names)
 
