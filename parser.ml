@@ -92,7 +92,7 @@ let defining_identifier = identifier
 
 let rec subtype_indication () = todo "subtype_indication"
 
-and subtype_mark () = name ()
+and subtype_mark () = name()
 
 and constraint_ () = todo "constraint"
 
@@ -131,10 +131,11 @@ and name () =
     <|> (token_char '\'' >> attribute_designator() >>= fun attr ->
          return @@ NAttrRef(prefix, attr))
     (*type_conversion*)
-    (*function_call*)
-(*  | NTypeConv of subtype_mark * expression
-  | NFunCall of name * param_assoc list option*)
-(*    <|> return prefix*)
+    <|> (token_char '(' >> expression() >>= fun expr ->
+         return @@ NTypeConv (prefix, expr))
+    (*function_call*) (*仕様では(params)がない場合も規定しているが、実際それはnameと区別できない。*)
+    <|> (actual_parameter_part() >>= fun params ->
+         return @@ NFunCall (prefix, Some params))
   in
   let rec name_nexts prevname =
     (name_next prevname >>= fun n -> name_nexts n)
@@ -207,27 +208,28 @@ and expression () : expression parser =
   <|> (sep1 (token_word "or" >> token_word "else") (relation ()) >>= fun rs ->
        return @@ EOr rs)
   <|> (sep1 (token_word "xor") (relation ()) >>= fun rs -> return @@ EXor rs)
-  
-(** 5. Statements **)
 
 (**=============6*)
-let parameter_assoc =
+and parameter_assoc () =
   opt (selector_name << token_word "=>") >>= fun sel ->
   expression() >>= fun expr ->
   return (sel, expr)
-let actual_parameter_part =
+and actual_parameter_part () =
   token_char '(' >>
-  sep1 (token_char ',') parameter_assoc
+  sep1 (token_char ',') (parameter_assoc())
   << token_char ')'
 (**=============6*)
+  
+(** 5. Statements **)
 
 let simple_statement =
   (* TODO null *)
   (* TODO assignment *)
   (* TODO exit *)
   (* TODO goto *)
-  (name() ^?"name">>= fun n -> opt actual_parameter_part ^?"parms" << token_char ';' >>= fun ps ->
-   return @@ StProcCall(n, ps)) ^?"StProcCall"
+  (name() >>= fun n ->
+   opt (actual_parameter_part()) << token_char ';' >>= fun ps ->
+   return @@ StProcCall(n, ps))
   (* TODO return *)
   (* TODO entry *)
   (* TODO requeue *)
@@ -247,7 +249,7 @@ let sequence_of_statements =
 (** 6. Subprograms **)
 
 (**======from 10 **)
-let parent_unit_name = name ()
+let parent_unit_name = name()
 (**======from 10 **)
 
 let defining_program_unit_name =
@@ -272,7 +274,7 @@ let declarative_part =
 (**========from 3**)
 
 (**========from 10**)
-let parent_unit_name = name ()
+let parent_unit_name = name()
 (**========from 10**)
 
 (**========from 11**)
@@ -316,7 +318,7 @@ let use_clause =
 
 (** 10. Program Structure and Compilation Issues **)
 let with_clause =
-  let library_unit_name = name () in
+  let library_unit_name = name() in
   token_word "with" >>
   sep1 (token_char ',') library_unit_name >>= fun lu_names ->
   token_char ';' >>
