@@ -146,6 +146,8 @@ LIB = lib
 
 $(LIB): $(OCamlLibrary $(LIB), $(LIBFILES))
 
+.DEFAULT: $(LIB)
+
 ################################################
 # Build an OCaml program
 #
@@ -162,6 +164,9 @@ PROGRAM = sample
 OCAML_LIBS +=
 # OCAML_CLIBS +=
 OCAML_OTHER_LIBS += unix
-# OCAML_LIB_FLAGS +=
-#
+OCAML_FLAGS = -annot
+
 $(PROGRAM): $(OCamlProgram $(PROGRAM), $(FILES))
+
+clean:
+	rm -f *~ *.opt *.run *.cm[ioax] *.cmxa *.o *.annot $(PROGRAM) $(LIB)
