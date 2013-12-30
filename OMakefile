@@ -25,7 +25,7 @@
 # Phony targets are scoped, so you probably want to declare them first.
 #
 
-.PHONY: all install clean sample lib
+.PHONY: all install clean sample lib top
 
 ########################################################################
 # Subdirectories.
@@ -167,6 +167,9 @@ FILES[] =
 PROGRAM = sample
 
 $(PROGRAM): $(OCamlProgram $(PROGRAM), $(FILES))
+
+top: $(LIB)
+	rlwrap ocaml unix.cma lib.cma
 
 clean:
 	rm -f *~ *.opt *.run *.cm[ioax] *.cmxa *.o *.annot $(PROGRAM) $(LIB)
