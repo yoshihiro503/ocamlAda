@@ -121,7 +121,6 @@ let string_literal =
 
 let operator_symbol = string_literal
 
-let numeric_literal = todo "numeric_literal"
 (**=====**)
 let selector_name = (* sec. 4 *)
   identifier <|> (character_literal |> map (String.make 1)) <|> operator_symbol

@@ -6,7 +6,7 @@ type intpart = string
 type fracpart = string
 type exponent = plusminus option * string
 type base = string
-type numeric_literal =
+type numeric =
   | NumDecimal of intpart * fracpart option * exponent option
   | NumBased of base * intpart * fracpart option * exponent option
 
@@ -17,8 +17,6 @@ type aop = Add | Sub | BitAnd
 type mop = Mult | Div | Mod | Rem
 type pop = Pow
 type eop = Eq | Neq | Lt | Lte | Gt | Gte
-
-type numeric = unit(*TODO*)
 
 type name =
   | NDirect of direct_name
