@@ -8,9 +8,10 @@ let is_some = function Some _ -> true | None -> false
 let sep2 s p =
   p >>= fun x -> many1 (s >> p) >>= fun xs -> return (x :: xs)
 
-type 'a parser = 'a ParserMonad.t
+type context = unit
+type 'a parser = (context,'a) ParserMonad.t
 let sep = ()
-let todo s : 'a ParserMonad.t = print_endline ("TODO: "^s); error s
+let todo s : 'a parser = print_endline ("TODO: "^s); error s
 
 module SpecialChar = struct
   let space = char ' '
@@ -43,7 +44,7 @@ let comsep2 p = sep2 comma p
 let symbol s = token(keyword s)
 
 (** 2. Lexical Elements **)
-let format_effector =
+let format_effector : char parser =
   char_when (function |'\x09'|'\x0b'|'\x0d'|'\x0a'|'\x0c'-> true | _ -> false)
 
 let digit =
@@ -476,6 +477,7 @@ let compilation =
   in
   many compilation_unit
 
+let init_context = ()
 let run_ch ch =
-  ParserMonad.run_ch (compilation) ch
+  ParserMonad.run_ch init_context (compilation) ch
 
