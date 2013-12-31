@@ -28,5 +28,5 @@ top: $(LIB)
        rlwrap ocaml unix.cma lib.cma
 
 clean:
-       rm -f *~ *.opt *.run *.cm[ioax] *.cmxa *.o *.annot $(PROGRAM) $(LIB)
+       rm -f *~ *.opt *.run *.cm[ioax] *.cmxa *.o *.annot $(LIB)
 
