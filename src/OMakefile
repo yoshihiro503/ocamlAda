@@ -1,0 +1,32 @@
+.PHONY: all install clean lib top
+
+################################################
+# Build an OCaml library
+#
+
+BYTE_ENABLED = true
+OCAMLINCLUDES +=
+
+LIBFILES[] =
+       util
+       llist
+       parserMonad
+       ast
+       parser
+
+LIB = lib
+
+OCAML_LIBS +=
+OCAML_OTHER_LIBS += unix
+OCAMLFLAGS = -annot
+
+$(LIB): $(OCamlLibrary $(LIB), $(LIBFILES))
+
+.DEFAULT: $(LIB)
+
+top: $(LIB)
+       rlwrap ocaml unix.cma lib.cma
+
+clean:
+       rm -f *~ *.opt *.run *.cm[ioax] *.cmxa *.o *.annot $(PROGRAM) $(LIB)
+

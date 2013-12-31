@@ -33,7 +33,7 @@
 # If so, define the subdirectory targets and uncomment this section.
 #
 
-# .SUBDIRS:
+.SUBDIRS: src sample
 
 ########################################################################
 # C configuration.
@@ -111,7 +111,7 @@
 # The default values are defined as follows:
 #
 # NATIVE_ENABLED = $(OCAMLOPT_EXISTS)
-BYTE_ENABLED = true
+# BYTE_ENABLED = true
 
 #
 # Various options
@@ -131,45 +131,3 @@ BYTE_ENABLED = true
 #
 # OCamlGeneratedFiles(parser.ml lexer.ml)
 
-################################################
-# Build an OCaml library
-#
-
-LIBFILES[] =
-	util
-	llist
-	parserMonad
-	ast
-	parser
-
-LIB = lib
-
-OCAML_LIBS +=
-OCAML_OTHER_LIBS += unix
-OCAMLFLAGS = -annot
-
-$(LIB): $(OCamlLibrary $(LIB), $(LIBFILES))
-
-.DEFAULT: $(LIB)
-
-################################################
-# Build an OCaml program
-#
-
-FILES[] =
-	util
-	llist
-	parserMonad
-	parser
-	ast
-	sample
-
-PROGRAM = sample
-
-$(PROGRAM): $(OCamlProgram $(PROGRAM), $(FILES))
-
-top: $(LIB)
-	rlwrap ocaml unix.cma lib.cma
-
-clean:
-	rm -f *~ *.opt *.run *.cm[ioax] *.cmxa *.o *.annot $(PROGRAM) $(LIB)
