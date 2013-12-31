@@ -17,7 +17,12 @@ val ( <|> ) : 'a t -> 'a t -> 'a t
 val many : 'a t -> 'a list t
 val many1 : 'a t -> 'a list t
 val sep : 'a t -> 'b t -> 'b list t
+val sep1 : 'a t -> 'b t -> 'b list t
 val opt : 'a t -> 'a option t
+
+val map : ('a -> 'b) -> 'a t -> 'b t
+val guard : bool -> unit t
+val ( >*< ) : 'a t -> 'b t -> ('a * 'b) t
 
 val char1 : char t
 val char_when : (char -> bool) -> char t

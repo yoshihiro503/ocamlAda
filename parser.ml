@@ -5,18 +5,11 @@ open Ast
 
 let is_some = function Some _ -> true | None -> false
 
-type 'a parser = 'a ParserMonad.t
-
-let map f p = p >>= fun x -> return @@ f x
-let guard b = if b then return () else error "Guard"
-let sep1 s p =
-  p >>= fun x -> many (s >> p) >>= fun xs -> return (x :: xs)
 let sep2 s p =
   p >>= fun x -> many1 (s >> p) >>= fun xs -> return (x :: xs)
-let sep = ()
-  
-let (>*<) p1 p2 = p1 >>= fun x -> p2 >>= fun y -> return (x,y)
 
+type 'a parser = 'a ParserMonad.t
+let sep = ()
 let todo s : 'a ParserMonad.t = print_endline ("TODO: "^s); error s
 
 module SpecialChar = struct
@@ -40,7 +33,6 @@ let token p =
   return x
 
 let token_char c = token (char c)
-let token_word w = token (keyword w)
 
 let popen = token_char '('
 let pclose = token_char ')'
@@ -48,6 +40,7 @@ let comma = token_char ','
 let vbar = token_char '|'
 let comsep1 p = sep1 comma p
 let comsep2 p = sep2 comma p
+let symbol s = token(keyword s)
 
 (**  Lexical Elements **)
 let digit =
@@ -62,6 +55,9 @@ let identifier =
     many (identifier_letter <|> char '_' <|> digit) >>= fun cs ->
     return @@ string_of_chars (c1::cs)
   end
+
+let word w =
+  identifier >>= fun s -> guard (s = w) >> return s
 
 let graphic_character =
   identifier_letter <|> digit
@@ -112,16 +108,16 @@ and constraint_ () =
   <|> discriminant_constraint()
 
 and range_constraint () =
-  token_word "range" >> range()
+  word "range" >> range()
 
 and range () =
   (range_attribute_reference() >>= fun (p,d) -> return @@ RangeAttrRef (p,d))
-  <|> (simple_expression() >*< (token_word "..">>simple_expression()) >>=
+  <|> (simple_expression() >*< (symbol "..">>simple_expression()) >>=
        fun (x,y) ->
        return @@ Range(x,y))
 
 and digits_constraint () =
-  token_word"digits">> expression() >*< opt(range_constraint()) >>= fun(e,r)->
+  word"digits">> expression() >*< opt(range_constraint()) >>= fun(e,r)->
   return @@ CoDigits(e, r)
 
 and index_constraint() =
@@ -137,14 +133,14 @@ and discriminant_constraint () =
   return @@ CoDiscrim ds
 
 and discriminant_association () =
-  opt (sep1 vbar selector_name << token_word "=>") >*< expression()
+  opt (sep1 vbar selector_name << symbol"=>") >*< expression()
 
 and discrete_choice_list () = sep1 vbar (discrete_choice())
 
 and discrete_choice () =
   (expression() >>= fun e -> return @@ DcExpr e)
   <|> (discrete_range() >>= fun r -> return @@ DcRange r)
-  <|> (token_word "others" >> return @@ DcOthers)
+  <|> (word "others" >> return @@ DcOthers)
 
 (** 4. Names and Expressions **)
 and name () =
@@ -179,29 +175,29 @@ and name () =
 and prefix () = name()
 
 and attribute_designator () : attribute parser =
-  (token_word "Access" >> return AAccess)
-  <|> (token_word "Delta" >> return ADelta)
-  <|> (token_word "Digit" >> return ADigit)
+  (word "Access" >> return AAccess)
+  <|> (word "Delta" >> return ADelta)
+  <|> (word "Digit" >> return ADigit)
   <|> (identifier >>= fun ident ->
    opt (popen >> expression() << pclose) >>= fun e ->
    return @@ AIdent(ident, e))
 
 and range_attribute_reference () =
   let range_attribute_disignator () =
-    token_word "Range" >> opt (popen >> expression() << pclose)
+    word "Range" >> opt (popen >> expression() << pclose)
   in
   prefix() >*< (token_char '\'' >> range_attribute_disignator())
 
 and array_aggregate () =
   let array_component_associtiation () =
-    discrete_choice_list() >>= fun dcs -> token_word "=>" >>
+    discrete_choice_list() >>= fun dcs -> symbol "=>" >>
     expression() >>= fun e -> return @@ (dcs, e)
   in
   (*positional_array_aggregate*)
   (popen >> comsep2 (expression()) >>= fun es ->
    pclose >> return @@ ArrayAgPos es)
   <|> (popen >> comsep1 (expression()) >>= fun es ->
-       comma >> token_word "others" >> token_word "=>" >>
+       comma >> word "others" >> symbol "=>" >>
        expression() >>= fun oe ->
        pclose >> return @@ ArrayAgPosOthers (es,oe))
   (*named_array_aggregate*)
@@ -212,19 +208,19 @@ and array_aggregate () =
 and aggregate () =
   let record_component_association () =
     let component_choice_list =
-      (token_word "others" >> return CCLOthers)
+      (word "others" >> return CCLOthers)
       <|> (sep1 vbar selector_name >>= fun ns -> return @@ CCLSels ns)
     in
-    opt (component_choice_list << token_word "=>") >*< expression()
+    opt (component_choice_list << symbol "=>") >*< expression()
   in
   let ancestor_part = expression in
-  let nullrec = token_word"null">> token_word"record">> return AgNullRecord in
+  let nullrec = word"null">> word"record">> return AgNullRecord in
   (*record_aggregate*)
   (popen >> comsep1 (record_component_association())
    << pclose >>= fun cs -> return @@ AgRecord cs)
   <|> nullrec
   (*extension_aggregate*)
-  <|> (popen >> ancestor_part() << token_word "with" >>= fun anc ->
+  <|> (popen >> ancestor_part() << word "with" >>= fun anc ->
        begin nullrec
        <|> (comsep1 (record_component_association()) >>= fun cs->
             return @@ AgExtension(anc, cs))
@@ -239,9 +235,9 @@ and qualified_expression () =
 
 and primary () =
   (numeric_literal >>= fun num -> return @@ PNum num)
-  <|> (token_word "null" >> return @@ PNull)
+  <|> (word "null" >> return @@ PNull)
   <|> (string_literal >>= fun s -> return @@ PString s)
-  <|> (token_word "new" >>
+  <|> (word "new" >>
          (subtype_indication()>>= fun ind-> return @@ PAllocator(AlSubtype ind))
          <|> (qualified_expression()>>= fun q-> return @@ PAllocator(AlQual q)))
   <|> (aggregate() >>= fun a -> return @@ PAggregate a)
@@ -251,9 +247,9 @@ and primary () =
        return @@ PParen e)
 
 and factor () =
-  let pop = token_word "**" >> return Pow in
-  (token_word "abs" >> primary() >>= fun p -> return @@ FAbs p)
-  <|> (token_word "not" >> primary() >>= fun p -> return @@ FNot p)
+  let pop = symbol "**" >> return Pow in
+  (word "abs" >> primary() >>= fun p -> return @@ FAbs p)
+  <|> (word "not" >> primary() >>= fun p -> return @@ FNot p)
   <|> (primary() >>= fun p -> many (pop >*< primary()) >>= fun pps ->
        return @@ FPow(p, pps))
 
@@ -275,11 +271,11 @@ and simple_expression () =
     
 and relation () =
   let aop =
-    (token_char '=' >> return Eq) <|> (token_word "/=" >> return Neq)
+    (token_char '=' >> return Eq) <|> (symbol "/=" >> return Neq)
     <|> (token_char '<' >> return Lt) (*TODO*)
   in
-  (simple_expression() >>= fun se -> opt (token_word "not") >>= fun not ->
-  token_word "in" >> begin
+  (simple_expression() >>= fun se -> opt(word "not") >>= fun not -> word "in">>
+    begin
     (range() >>= fun range -> return @@ RInRange(is_some not, se, range))
     <|> (subtype_mark() >>= fun smark -> return @@ RInSubMark(is_some not, se, smark))
   end)
@@ -287,17 +283,17 @@ and relation () =
        many (aop >*< simple_expression()) >>= fun ses -> return @@ RE(se, ses))
 
 and expression () : expression parser =
-  (sep1 (token_word "and") (relation ()) >>= fun rs -> return @@ EAnd rs)
-  <|> (sep1 (token_word "and" >> token_word "then") (relation ()) >>= fun rs ->
+  (sep1 (word "and") (relation ()) >>= fun rs -> return @@ EAnd rs)
+  <|> (sep1 (word "and" >> word "then") (relation ()) >>= fun rs ->
        return @@ EAnd rs)
-  <|> (sep1 (token_word "or") (relation ()) >>= fun rs -> return @@ EOr rs)
-  <|> (sep1 (token_word "or" >> token_word "else") (relation ()) >>= fun rs ->
+  <|> (sep1 (word "or") (relation ()) >>= fun rs -> return @@ EOr rs)
+  <|> (sep1 (word "or" >> word "else") (relation ()) >>= fun rs ->
        return @@ EOr rs)
-  <|> (sep1 (token_word "xor") (relation ()) >>= fun rs -> return @@ EXor rs)
+  <|> (sep1 (word "xor") (relation ()) >>= fun rs -> return @@ EXor rs)
 
 (**=============6*)
 and parameter_assoc () =
-  opt (selector_name << token_word "=>") >>= fun sel ->
+  opt (selector_name << symbol "=>") >>= fun sel ->
   expression() >>= fun expr ->
   return (sel, expr)
 and actual_parameter_part () =
@@ -309,7 +305,7 @@ and actual_parameter_part () =
 (**============13*)
 and static_expression () = expression()
 and delta_constraint() =
-  token_word"delta">> static_expression() >*< opt(range_constraint()) >>=
+  word"delta">> static_expression() >*< opt(range_constraint()) >>=
   fun (e, r) -> return @@ CoDelta(e, r)
   
 (**============13*)
@@ -354,10 +350,10 @@ let defining_designator : unit parser = todo "defining_designator"
 let formal_part : unit parser = todo "formal_part"
 
 let subprogram_specification =
-  (token_word "procedure" >> defining_program_unit_name >>= fun dpuname ->
+  (word "procedure" >> defining_program_unit_name >>= fun dpuname ->
     opt formal_part >>= fun formal -> return dpuname)
-(*TODO  <|> (token_word "function" >> defining_designator >>= fun def ->
-    opt formal_part >>= fun formal -> token_word "return" >> (subtype_mark()))
+(*TODO  <|> (word "function" >> defining_designator >>= fun def ->
+    opt formal_part >>= fun formal -> word "return" >> (subtype_mark()))
 *)
 
 (**========from 3**)
@@ -375,7 +371,7 @@ let parent_unit_name = name()
 let exception_handler : unit parser = todo "exception_handler"
 let handled_sequence_of_statements =
   sequence_of_statements >>= fun stats ->
-  opt (token_word "exception" >> many1 exception_handler) >>= fun exc ->
+  opt (word "exception" >> many1 exception_handler) >>= fun exc ->
   return @@ HandledStatements(stats, exc)
 (**========from 11**)
 
@@ -385,11 +381,11 @@ let designator =
 
 let subprogram_body =
   subprogram_specification >>= fun spec ->
-  token_word "is" >>
+  word "is" >>
   declarative_part >>= fun decl ->
-  token_word "begin" >>
+  word "begin" >>
   handled_sequence_of_statements >>= fun stats ->
-  token_word "end" >>
+  word "end" >>
   opt designator >>= fun design ->
   token_char ';' >>
   return stats
@@ -402,10 +398,10 @@ let package_body = todo "package_body"
 let package_name = name() ^?"package_name"
 
 let use_clause =
-  token_word "use" >>
+  word "use" >>
   begin
     comsep1 package_name
-    <|> (token_word "type" >> comsep1 (subtype_mark ()))
+    <|> (word "type" >> comsep1 (subtype_mark ()))
   end << token_char ';'
   
 
@@ -413,7 +409,7 @@ let use_clause =
 (** 10. Program Structure and Compilation Issues **)
 let with_clause =
   let library_unit_name = name() in
-  token_word "with" >>
+  word "with" >>
   comsep1 library_unit_name >>= fun lu_names ->
   token_char ';' >>
   return (lu_names)
@@ -435,9 +431,9 @@ let compilation =
       let library_unit_renaming_declaration =
         todo "library_unit_renaming_declaration"
       in
-      (opt (token_word "private") >>= fun private_ -> library_unit_declaration)
+      (opt (word "private") >>= fun private_ -> library_unit_declaration)
       <|> library_unit_body
-      <|> (opt (token_word "private") >>= fun private_ -> library_unit_renaming_declaration)
+      <|> (opt (word "private") >>= fun private_ -> library_unit_renaming_declaration)
     in
     context_clause >>= fun cc ->
     (library_item <|> subunit)

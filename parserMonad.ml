@@ -85,11 +85,18 @@ let sep separator p =
   (p >>= fun x -> many (separator >> p) >>= fun xs -> return (x::xs))
     <|> (return [])
 
+let sep1 s p =
+  p >>= fun x -> many (s >> p) >>= fun xs -> return (x :: xs)
 
 let opt : 'a t -> ('a option) t =
     fun p ->
       (p >>= fun x -> return (Some x)) <|> (return None)
 
+let map f p = p >>= fun x -> return @@ f x
+
+let guard b = if b then return () else error "Guard"
+
+let (>*<) p1 p2 = p1 >>= fun x -> p2 >>= fun y -> return (x,y)
 
 let _char1_with_debug state = function
   | Nil -> Inr (state,"(Nil)")
