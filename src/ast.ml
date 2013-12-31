@@ -1,9 +1,18 @@
 open Util
 
+type plusminus = Plus | Minus
+
+type intpart = string
+type fracpart = string
+type exponent = plusminus option * string
+type base = string
+type numeric_literal =
+  | NumDecimal of intpart * fracpart option * exponent option
+  | NumBased of base * intpart * fracpart option * exponent option
+
 type selector_name = string
 type direct_name = string
 
-type plusminus = Plus | Minus
 type aop = Add | Sub | BitAnd
 type mop = Mult | Div | Mod | Rem
 type pop = Pow

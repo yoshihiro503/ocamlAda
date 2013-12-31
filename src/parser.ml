@@ -42,7 +42,10 @@ let comsep1 p = sep1 comma p
 let comsep2 p = sep2 comma p
 let symbol s = token(keyword s)
 
-(**  Lexical Elements **)
+(** 2. Lexical Elements **)
+let format_effector =
+  char_when (function |'\x09'|'\x0b'|'\x0d'|'\x0a'|'\x0c'-> true | _ -> false)
+
 let digit =
   char_when (function | '0'..'9' -> true | _ -> false)
 
@@ -62,6 +65,40 @@ let word w =
 let graphic_character =
   identifier_letter <|> digit
   <|> SpecialChar.space <|> SpecialChar.iso_10646_BMP
+
+let numeral =
+  sep1 (token_char '_') digit >>= (return $ string_of_chars)
+
+let exponent =
+  let plusminus =
+    (token_char '+'>> return Plus) <|> (token_char '-'>> return Minus)
+  in
+  token_char 'E' >> opt plusminus >*< numeral
+
+let based_literal =
+  let base = numeral in
+  let based_numeral =
+    let extended_digit =
+      digit <|> char_when (function 'A'..'F' -> true | _ -> false)
+    in
+    sep1 (token_char '_') extended_digit >>= (return $ string_of_chars)
+  in
+  base >>= fun base ->
+  token_char '#' >>
+  based_numeral >>= fun int ->
+  opt (token_char '.' >> based_numeral) >>= fun frac ->
+  token_char '#' >>
+  opt exponent >>= fun expo ->
+  return @@ NumBased(base, int, frac, expo)
+
+let numeric_literal =
+  let decimal_literal =
+    numeral >>= fun int ->
+    opt (token_char '.' >> numeral) >>= fun frac ->
+    opt exponent >>= fun expo ->
+    return @@ NumDecimal(int, frac, expo)
+  in
+  decimal_literal <|> based_literal
 
 let character_literal =
   token begin
