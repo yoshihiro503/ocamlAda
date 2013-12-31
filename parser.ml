@@ -100,7 +100,7 @@ let direct_name =
 let defining_identifier = identifier
 
 let rec subtype_indication () =
-  subtype_mark() >*< opt (constraint_())
+  subtype_mark() >>= fun n -> opt (constraint_()) >>= fun c -> return(n,c)
 
 and subtype_mark () = name()
 
