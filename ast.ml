@@ -30,7 +30,10 @@ and comp_choice_list =
   | CCLOthers
   | CCLSels of selector_name list
 and record_comp_assoc = comp_choice_list option * expression
-and discrete_choice = unit(*TODO*)
+and discrete_choice =
+  | DcExpr of expression
+  | DcRange of discrete_range
+  | DcOthers
 and array_aggregate =
   | ArrayAgPos of expression list
   | ArrayAgPosOthers of expression list * expression

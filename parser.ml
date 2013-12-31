@@ -99,7 +99,8 @@ let direct_name =
 (** 3. Declarations and Types **)
 let defining_identifier = identifier
 
-let rec subtype_indication () = todo "subtype_indication"
+let rec subtype_indication () =
+  subtype_mark() >*< opt (constraint_())
 
 and subtype_mark () = name()
 
@@ -138,9 +139,12 @@ and discriminant_constraint () =
 and discriminant_association () =
   opt (sep1 vbar selector_name << token_word "=>") >*< expression()
 
-and discrete_choice_list () = todo "discrete_choice_list"
+and discrete_choice_list () = sep1 vbar (discrete_choice())
 
-and discrete_choice () = todo "discrete_choice"
+and discrete_choice () =
+  (expression() >>= fun e -> return @@ DcExpr e)
+  <|> (discrete_range() >>= fun r -> return @@ DcRange r)
+  <|> (token_word "others" >> return @@ DcOthers)
 
 (** 4. Names and Expressions **)
 and name () =
