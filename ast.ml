@@ -39,10 +39,11 @@ and aggregate =
   | AgRecord of record_comp_assoc list
   | AgExtension of expression * record_comp_assoc list
   | AgArray of array_aggregate
-and allocator = unit(*TODO*)
 and qualified_expr =
   | QExpr of subtype_mark * expression
   | QAggr of subtype_mark * aggregate
+and allocator =
+  | AlSubtype of subtype_ind | AlQual of qualified_expr
 and primary =
   | PNum of numeric
   | PNull

@@ -200,16 +200,21 @@ and aggregate () =
   (*array_aggregate*)
   <|> (array_aggregate() >>= fun aa -> return @@ AgArray aa)
 
+and qualified_expression () =
+  subtype_mark() >>= fun n ->
+    (popen >> expression() << pclose >>= fun es -> return @@ QExpr(n,es))
+    <|> (aggregate() >>= fun ag -> return @@ QAggr(n,ag))
+
 and primary () =
   (numeric_literal >>= fun num -> return @@ PNum num)
   <|> (token_word "null" >> return @@ PNull)
   <|> (string_literal >>= fun s -> return @@ PString s)
+  <|> (token_word "new" >>
+         (subtype_indication()>>= fun ind-> return @@ PAllocator(AlSubtype ind))
+         <|> (qualified_expression()>>= fun q-> return @@ PAllocator(AlQual q)))
   <|> (aggregate() >>= fun a -> return @@ PAggregate a)
-  <|> (subtype_mark() >>= fun n ->
-        (popen>> expression() <<pclose >>= fun es -> return@@PQual(QExpr(n,es)))
-        <|> (aggregate() >>= fun ag -> return @@ PQual(QAggr(n,ag))))
+  <|> (qualified_expression() >>= fun q -> return @@ PQual q)
   <|> (name() >>= fun n -> return @@ PName n)
-(*  <|> TODO: allocator *)
   <|> (popen >> expression() << pclose >>= fun e ->
        return @@ PParen e)
 
