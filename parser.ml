@@ -205,8 +205,10 @@ and primary () =
   <|> (token_word "null" >> return @@ PNull)
   <|> (string_literal >>= fun s -> return @@ PString s)
   <|> (aggregate() >>= fun a -> return @@ PAggregate a)
+  <|> (subtype_mark() >>= fun n ->
+        (popen>> expression() <<pclose >>= fun es -> return@@PQual(QExpr(n,es)))
+        <|> (aggregate() >>= fun ag -> return @@ PQual(QAggr(n,ag))))
   <|> (name() >>= fun n -> return @@ PName n)
-(*  <|> TODO: qual expr *)
 (*  <|> TODO: allocator *)
   <|> (popen >> expression() << pclose >>= fun e ->
        return @@ PParen e)

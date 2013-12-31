@@ -49,7 +49,7 @@ and primary =
   | PString of string
   | PAggregate of aggregate
   | PName of name
-  | PQualifedExpr of qualified_expr
+  | PQual of qualified_expr
   | PAllocator of allocator
   | PParen of expression
 and factor =
