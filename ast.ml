@@ -21,6 +21,7 @@ type name =
   | NAttrRef of name * attribute
   | NTypeConv of subtype_mark * expression
   | NFunCall of name * param_assoc list option
+and prefix = name
 and subtype_mark = name
 and attribute =
   | AIdent of string * expression option
@@ -61,9 +62,16 @@ and term =
   | Term of factor * (mop * factor) list
 and simple_expr =
   | SE of plusminus option * term * (aop * term) list
-and range = unit(*TODO*)
+and range =
+  | RangeAttrRef of prefix * expression option
+  | Range of simple_expr * simple_expr
 and subtype_ind = subtype_mark * constraint_ option
-and constraint_ = unit(*TODO*)
+and constraint_ =
+  | CoRange of range
+  | CoDigits of expression * range option
+  | CoDelta of static_expr * range option
+  | CoIndex of discrete_range list
+  | CoDiscrim of (selector_name list option * expression) list
 and discrete_range =
   | DrSubtype of subtype_ind | DrRange of range
 and relation =
@@ -75,6 +83,7 @@ and expression =
   | EOr of relation list
   | EXor of relation list
 and param_assoc = selector_name option * expression
+and static_expr = expression
 
 type statement =
 (*TODO*)

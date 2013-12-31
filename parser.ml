@@ -45,6 +45,7 @@ let token_word w = token (keyword w)
 let popen = token_char '('
 let pclose = token_char ')'
 let comma = token_char ','
+let vbar = token_char '|'
 let comsep1 p = sep1 comma p
 let comsep2 p = sep2 comma p
 
@@ -102,21 +103,40 @@ let rec subtype_indication () = todo "subtype_indication"
 
 and subtype_mark () = name()
 
-and constraint_ () = todo "constraint"
+and constraint_ () =
+  (range_constraint() >>= fun r -> return @@ CoRange r)
+  <|> digits_constraint()
+  <|> delta_constraint()
+  <|> index_constraint()
+  <|> discriminant_constraint()
 
-and range_constraint () = todo "range_constraint"
+and range_constraint () =
+  token_word "range" >> range()
 
-and range () = todo "range"
+and range () =
+  (range_attribute_reference() >>= fun (p,d) -> return @@ RangeAttrRef (p,d))
+  <|> (simple_expression() >*< (token_word "..">>simple_expression()) >>=
+       fun (x,y) ->
+       return @@ Range(x,y))
 
-and digits_constraint () = todo "digits_constraint"
+and digits_constraint () =
+  token_word"digits">> expression() >*< opt(range_constraint()) >>= fun(e,r)->
+  return @@ CoDigits(e, r)
 
-and index_constraint() = todo "index_constraint"
+and index_constraint() =
+  popen >> comsep1 (discrete_range()) << pclose >>= fun rs ->
+  return @@ CoIndex rs
 
-and discrete_range () = todo "discrete_range"
+and discrete_range () =
+  (subtype_indication() >>= fun ind -> return @@ DrSubtype ind)
+  <|> (range() >>= fun r -> return @@ DrRange r)
 
-and discriminant_constraint () = todo "discriminant_constraint"
+and discriminant_constraint () =
+  popen >> comsep1 (discriminant_association()) << pclose >>= fun ds ->
+  return @@ CoDiscrim ds
 
-and discriminant_association () = todo "discriminant_association"
+and discriminant_association () =
+  opt (sep1 vbar selector_name << token_word "=>") >*< expression()
 
 and discrete_choice_list () = todo "discrete_choice_list"
 
@@ -152,6 +172,8 @@ and name () =
   (direct_name >>= fun d -> name_nexts (NDirect d))
   <|> (character_literal >>= fun c -> name_nexts (NChar c))
 
+and prefix () = name()
+
 and attribute_designator () : attribute parser =
   (token_word "Access" >> return AAccess)
   <|> (token_word "Delta" >> return ADelta)
@@ -159,6 +181,12 @@ and attribute_designator () : attribute parser =
   <|> (identifier >>= fun ident ->
    opt (popen >> expression() << pclose) >>= fun e ->
    return @@ AIdent(ident, e))
+
+and range_attribute_reference () =
+  let range_attribute_disignator () =
+    token_word "Range" >> opt (popen >> expression() << pclose)
+  in
+  prefix() >*< (token_char '\'' >> range_attribute_disignator())
 
 and array_aggregate () =
   let array_component_associtiation () =
@@ -181,7 +209,7 @@ and aggregate () =
   let record_component_association () =
     let component_choice_list =
       (token_word "others" >> return CCLOthers)
-      <|> (sep1(token_char '|')selector_name >>= fun ns -> return @@ CCLSels ns)
+      <|> (sep1 vbar selector_name >>= fun ns -> return @@ CCLSels ns)
     in
     opt (component_choice_list << token_word "=>") >*< expression()
   in
@@ -273,6 +301,14 @@ and actual_parameter_part () =
   comsep1 (parameter_assoc())
   << pclose
 (**=============6*)
+
+(**============13*)
+and static_expression () = expression()
+and delta_constraint() =
+  token_word"delta">> static_expression() >*< opt(range_constraint()) >>=
+  fun (e, r) -> return @@ CoDelta(e, r)
+  
+(**============13*)
   
 (** 5. Statements **)
 
