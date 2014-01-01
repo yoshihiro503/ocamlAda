@@ -377,9 +377,11 @@ and delta_constraint() =
   
 (** 5. Statements **)
 
+(**=============6*)
 let precedure_name =
   name() >>= fun n -> sguard (fun ctx -> C.is_precedure ctx n) >>
   return @@ ProcName n  
+(**=============6*)
 
 let variable_name = name()
   
