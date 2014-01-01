@@ -13,3 +13,6 @@ let is_package ctx name =
   List.mem name [NSelectedComp(Prefix(NDirect "Ada"), "Text_Io")]
 let is_libraryunit ctx name =
   List.mem name [NSelectedComp(Prefix(NDirect "Ada"), "Text_Io")]
+
+let is_parent_unit ctx name =
+  List.mem name []

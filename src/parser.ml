@@ -410,7 +410,10 @@ let sequence_of_statements =
 (** 6. Subprograms **)
 
 (**======from 10 **)
-let parent_unit_name = name()
+let parent_unit_name =
+  name() >>= fun n -> sguard (fun ctx -> C.is_parent_unit ctx n) >>
+  return @@ ParentUnit n
+    
 (**======from 10 **)
 
 let defining_program_unit_name =
