@@ -42,9 +42,11 @@ let token_char c = token (char c) ^? (!%"token'%c'" c)
 let popen = token_char '('
 let pclose = token_char ')'
 let comma = token_char ','
+let semicolon = token_char ';'
 let vbar = token_char '|'
 let comsep1 p = sep1 comma p
 let comsep2 p = sep2 comma p
+let semsep1 p = sep1 semicolon p
 let symbol s = token(keyword s)
 
 (** 2. Lexical Elements **)
@@ -52,17 +54,17 @@ let format_effector : char parser =
   char_when (function |'\x09'|'\x0b'|'\x0d'|'\x0a'|'\x0c'-> true | _ -> false)
 
 let digit =
-  char_when (function | '0'..'9' -> true | _ -> false)
+  char_when (function | '0'..'9' -> true | _ -> false) ^? "digit"
 
 let identifier_letter =
-  char_when (function | 'a'..'z' | 'A'..'Z' -> true | _ -> false)
+  char_when (function | 'a'..'z' | 'A'..'Z' -> true | _ -> false) ^? "identletter"
 
 let identifier =
   token begin
     identifier_letter >>= fun c1 ->
     many (identifier_letter <|> char '_' <|> digit) >>= fun cs ->
     return @@ string_of_chars (c1::cs)
-  end
+  end ^? "identifire"
 
 let word w =
   identifier >>= fun s -> guard (s = w) >> return s
@@ -370,7 +372,6 @@ and static_expression () = expression()
 and delta_constraint() =
   word"delta">> static_expression() >*< opt(range_constraint()) >>=
   fun (e, r) -> return @@ CoDelta(e, r)
-  
 (**============13*)
   
 (** 5. Statements **)
@@ -388,7 +389,8 @@ let simple_statement =
   (* TODO assignment *)
   (* TODO exit *)
   (* TODO goto *)
-  (pname >>= fun n ->
+  (* procedure_call_statement *)
+  (pname >>= fun n -> print_endline"proc_call_statement";
    opt (actual_parameter_part()) << token_char ';' >>= fun ps ->
    return @@ StProcCall(n, ps))
   (* TODO return *)
@@ -409,11 +411,16 @@ let sequence_of_statements =
 
 (** 6. Subprograms **)
 
+(**======from 3. **)
+let default_expression = expression()
+let access_definition = word "access" >> subtype_mark()
+let defining_identifier_list = comsep1 defining_identifier
+(**======from 3. **)
+
 (**======from 10 **)
 let parent_unit_name =
   name() >>= fun n -> sguard (fun ctx -> C.is_parent_unit ctx n) >>
   return @@ ParentUnit n
-    
 (**======from 10 **)
 
 let defining_program_unit_name =
@@ -421,10 +428,29 @@ let defining_program_unit_name =
   defining_identifier
 
 let defining_designator : unit parser = todo "defining_designator"
-let formal_part : unit parser = todo "formal_part"
+
+let mode =
+  (word "in" >> word "out" >> return InOut)
+  <|> (word "out" >> return Out)
+  <|> (word "in" >> return In)
+  <|> return NoMode
+
+let formal_part =
+  let parameter_specification =
+    defining_identifier_list >>= fun ps ->
+    token_char ':' >>
+    begin
+      (mode >*< subtype_mark() >>= fun (m,s) -> return @@ PSMode(m, s))
+      <|> (access_definition >>= fun ad -> return @@ PSAccess(ad))
+    end >>= fun ty ->
+    opt (symbol ":=" >> default_expression) >>= fun expr ->
+    return @@ (ps, ty, expr)
+  in
+  popen>> semsep1 parameter_specification <<pclose
 
 let subprogram_specification =
   (word "procedure" >> defining_program_unit_name >>= fun dpuname ->
+print_endline ("procedure: dpuname="^dpuname);
     opt formal_part >>= fun formal -> return dpuname)
 (*TODO  <|> (word "function" >> defining_designator >>= fun def ->
     opt formal_part >>= fun formal -> word "return" >> (subtype_mark()))

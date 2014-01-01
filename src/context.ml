@@ -4,7 +4,7 @@ type t = unit
 let is_prefix ctx name =
   List.mem name [NDirect "Ada"]
 let is_submark ctx name =
-  false
+  List.mem name [NDirect "Integer"]
 let is_fname ctx name =
   false
 let is_precedure ctx name =

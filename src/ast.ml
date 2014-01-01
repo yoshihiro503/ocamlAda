@@ -122,6 +122,11 @@ and pname =
   | PNPrefix of prefix
   | PNProcName of proc_name
 
+type mode =
+  | NoMode | In | Out | InOut
+type param_type_spec =
+  | PSMode of mode * subtype_mark
+  | PSAccess of subtype_mark
 
 (** 8. Visibility Rules **)
 type package_name = PackageName of name
