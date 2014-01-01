@@ -134,3 +134,6 @@ type with_clause = library_unit_name list
 type context_clause =
   | WithClause of with_clause
   | UseClause of use_clause
+
+(** 8. **)
+type parent_unit_name = ParentUnit of name
