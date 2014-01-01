@@ -120,6 +120,7 @@ type label = Label of statement_identifier
 type seq_statements = (label list * statement_elem) list
 and statement_elem =
 (*TODO simple_statement *)
+  | StNull
   | StProcCall of pname * param_assoc list option
 (*TODO compound_statement *)
   | StIf of (condition * seq_statements) list * seq_statements option

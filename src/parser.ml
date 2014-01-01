@@ -380,18 +380,21 @@ and delta_constraint() =
 let precedure_name =
   name() >>= fun n -> sguard (fun ctx -> C.is_precedure ctx n) >>
   return @@ ProcName n  
+
+let variable_name = name()
   
 let simple_statement : statement_elem parser =
   let pname =
     (precedure_name |> map (fun p -> PNProcName p))
     <|> (prefix() |> map (fun pre -> PNPrefix pre))
   in
-  (* TODO null *)
-  (* TODO assignment *)
+  (* null_statement *)
+  (word "null" >> semicolon >> return StNull)
+  (* assignment_statement *)
   (* TODO exit *)
   (* TODO goto *)
   (* procedure_call_statement *)
-  (pname >>= fun n -> print_endline"proc_call_statement";
+  <|> (pname >>= fun n -> print_endline"proc_call_statement";
    opt (actual_parameter_part()) << token_char ';' >>= fun ps ->
    return @@ StProcCall(n, ps))
   (* TODO return *)
