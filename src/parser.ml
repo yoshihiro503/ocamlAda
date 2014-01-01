@@ -391,6 +391,8 @@ let simple_statement : statement_elem parser =
   (* null_statement *)
   (word "null" >> semicolon >> return StNull)
   (* assignment_statement *)
+  <|> (variable_name >>= fun vname -> symbol ":=" >>
+       expression() >>= fun expr -> semicolon >> return @@ StAssign(vname,expr))
   (* TODO exit *)
   (* TODO goto *)
   (* procedure_call_statement *)

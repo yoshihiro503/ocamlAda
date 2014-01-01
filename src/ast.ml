@@ -116,11 +116,13 @@ type condition = expression
 
 type statement_identifier = direct_name
 type label = Label of statement_identifier
+type var_name = name
 
 type seq_statements = (label list * statement_elem) list
 and statement_elem =
 (*TODO simple_statement *)
   | StNull
+  | StAssign of var_name * expression
   | StProcCall of pname * param_assoc list option
 (*TODO compound_statement *)
   | StIf of (condition * seq_statements) list * seq_statements option
