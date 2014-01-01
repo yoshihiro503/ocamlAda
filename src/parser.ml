@@ -139,7 +139,9 @@ let defining_identifier = identifier
 let rec subtype_indication () =
   subtype_mark() >>= fun n -> opt (constraint_()) >>= fun c -> return(n,c)
 
-and subtype_mark () = name() |> map (fun n -> SubtypeMark n) (*TODO*)
+and subtype_mark () =
+  name() >>= fun n -> sguard (fun ctx -> C.is_submark ctx n) >>
+  return @@ SubtypeMark n
 
 and constraint_ () =
   (range_constraint() >>= fun r -> return @@ CoRange r)
