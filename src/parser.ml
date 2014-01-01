@@ -335,9 +335,10 @@ and simple_expression () =
   opt plusminus >>= fun pm -> term() >>= fun t -> many (aop >*< term()) >>= fun ats -> return @@ SE(pm, t, ats)
     
 and relation () =
-  let aop =
+  let eop =
     (token_char '=' >> return Eq) <|> (symbol "/=" >> return Neq)
-    <|> (token_char '<' >> return Lt) (*TODO*)
+    <|> (symbol "<=" >> return Lte) <|> (token_char '<' >> return Lt)
+    <|> (symbol ">=" >> return Gte) <|> (token_char '>' >> return Gt)
   in
   (simple_expression() >>= fun se -> opt(word "not") >>= fun not -> word "in">>
     begin
@@ -345,7 +346,7 @@ and relation () =
     <|> (subtype_mark() >>= fun smark -> return @@ RInSubMark(is_some not, se, smark))
   end)
   <|> (simple_expression() >>= fun se ->
-       many (aop >*< simple_expression()) >>= fun ses -> return @@ RE(se, ses))
+       many (eop >*< simple_expression()) >>= fun ses -> return @@ RE(se, ses))
 
 and expression () : expression parser =
   (sep1 (word "and") (relation ()) >>= fun rs -> return @@ EAnd rs)
