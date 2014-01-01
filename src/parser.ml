@@ -380,7 +380,7 @@ let precedure_name =
   name() >>= fun n -> sguard (fun ctx -> C.is_precedure ctx n) >>
   return @@ ProcName n  
   
-let simple_statement =
+let simple_statement : statement_elem parser =
   let pname =
     (precedure_name |> map (fun p -> PNProcName p))
     <|> (prefix() |> map (fun pre -> PNPrefix pre))
@@ -401,13 +401,35 @@ let simple_statement =
   (* TODO raise *)
   (* TODO code *)
 
-let compound_statement = todo "compound_statement"
-let label : unit parser = todo "label"
-let statement =
-  many label >>= fun ls ->
-  (simple_statement <|> compound_statement)
-let sequence_of_statements =
-  many1 statement
+let condition = expression()
+
+let statement_identifier = direct_name
+let label =
+  symbol "<<" >> statement_identifier << symbol ">>" >>= fun id ->
+  return @@ Label id
+
+let rec compound_statement () =
+  (* if_statememtn *)
+  (word "if" >>
+   sep1 (word "elsif") begin
+     condition >>= fun cond -> word "then" >>
+     sequence_of_statements() >>= fun st ->
+     return (cond, st)
+   end >>= fun ss ->
+   opt (word "else" >> sequence_of_statements()) >>= fun else_ ->
+   word "end" >> word "if" >> semicolon >>
+   return @@ StIf(ss, else_))
+  (* TODO case_statement *)
+  (* TODO loop_statement *)
+  (* TODO block_statement *)
+  (* TODO accept_statement *)
+  (* TODO select_statement*)
+and statement () =
+  many label >>= fun labels ->
+  (simple_statement <|> compound_statement()) >>= fun st ->
+  return @@ (labels, st)
+and sequence_of_statements () =
+  many1 (statement())
 
 (** 6. Subprograms **)
 
@@ -466,7 +488,7 @@ let declarative_part =
 (**========from 11**)
 let exception_handler : unit parser = todo "exception_handler"
 let handled_sequence_of_statements =
-  sequence_of_statements >>= fun stats ->
+  sequence_of_statements() >>= fun stats ->
   opt (word "exception" >> many1 exception_handler) >>= fun exc ->
   return @@ HandledStatements(stats, exc)
 (**========from 11**)

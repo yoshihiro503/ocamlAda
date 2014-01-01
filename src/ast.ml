@@ -112,10 +112,17 @@ let rec sname = function
 and sprefix (Prefix n) = sname n
 
 (** 5. Statements **)
-type statement =
-(*TODO*)
+type condition = expression
+
+type statement_identifier = direct_name
+type label = Label of statement_identifier
+
+type seq_statements = (label list * statement_elem) list
+and statement_elem =
+(*TODO simple_statement *)
   | StProcCall of pname * param_assoc list option
-(*TODO*)
+(*TODO compound_statement *)
+  | StIf of (condition * seq_statements) list * seq_statements option
 (** 6. Subprograms **)
 and proc_name = ProcName of name
 and pname =
@@ -150,5 +157,5 @@ type context_clause =
 (** 11. Exceptions **)
 type exc_handler = unit(*TODO*)
 type handled_statements =
-  | HandledStatements of statement list * exc_handler list option
+  | HandledStatements of seq_statements * exc_handler list option
 
