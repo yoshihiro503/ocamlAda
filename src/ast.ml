@@ -1,5 +1,6 @@
 open Util
 
+(** 2. Lexical Elements **)
 type plusminus = Plus | Minus
 
 type intpart = string
@@ -9,6 +10,8 @@ type base = string
 type numeric =
   | NumDecimal of intpart * fracpart option * exponent option
   | NumBased of base * intpart * fracpart option * exponent option
+
+(** 4. Names and Expressions **)
 
 type selector_name = string
 type direct_name = string
@@ -108,32 +111,39 @@ let rec sname = function
   | NFunCall (fname, params) -> "NFunCall"
 and sprefix (Prefix n) = sname n
 
-
-type proc_name = ProcName of name
-type pname =
-  | PNPrefix of prefix
-  | PNProcName of proc_name
+(** 5. Statements **)
 type statement =
 (*TODO*)
   | StProcCall of pname * param_assoc list option
 (*TODO*)
+(** 6. Subprograms **)
+and proc_name = ProcName of name
+and pname =
+  | PNPrefix of prefix
+  | PNProcName of proc_name
 
-type exc_handler = unit(*TODO*)
-type handled_statements =
-  | HandledStatements of statement list * exc_handler list option
 
+(** 8. Visibility Rules **)
 type package_name = PackageName of name
 
 type use_clause =
   | UCPackage of package_name list
   | UCType of subtype_mark list
 
+(** 9. Tasks and Synchronization **)
+(** 10. Program Structure and Compilation Issues **)
+type parent_unit_name = ParentUnit of name
+
 type library_unit_name = LibraryUnit of name
 
 type with_clause = library_unit_name list
+
 type context_clause =
   | WithClause of with_clause
   | UseClause of use_clause
 
-(** 8. **)
-type parent_unit_name = ParentUnit of name
+(** 11. Exceptions **)
+type exc_handler = unit(*TODO*)
+type handled_statements =
+  | HandledStatements of statement list * exc_handler list option
+
