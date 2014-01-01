@@ -437,10 +437,6 @@ let declarative_part =
   many (basic_declarative_item <|> body)
 (**========from 3**)
 
-(**========from 10**)
-let parent_unit_name = name()
-(**========from 10**)
-
 (**========from 11**)
 let exception_handler : unit parser = todo "exception_handler"
 let handled_sequence_of_statements =
