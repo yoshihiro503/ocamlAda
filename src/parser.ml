@@ -454,10 +454,12 @@ let parent_unit_name =
 (**======from 10 **)
 
 let defining_program_unit_name =
-  opt (parent_unit_name << token_char '.') >>= fun parent ->
-  defining_identifier
+  opt (parent_unit_name << token_char '.') >*< defining_identifier
 
-let defining_designator : unit parser = todo "defining_designator"
+let defining_designator =
+  let defining_operator_symbol = operator_symbol in
+  (defining_program_unit_name>>= fun(pname,id) -> return @@ DdesUname(pname,id))
+  <|> (defining_operator_symbol >>= fun s -> return @@ DdesSymb s)
 
 let mode =
   (word "in" >> word "out" >> return InOut)
@@ -479,12 +481,13 @@ let formal_part =
   popen>> semsep1 parameter_specification <<pclose
 
 let subprogram_specification =
-  (word "procedure" >> defining_program_unit_name >>= fun dpuname ->
-print_endline ("procedure: dpuname="^dpuname);
-    opt formal_part >>= fun formal -> return dpuname)
-(*TODO  <|> (word "function" >> defining_designator >>= fun def ->
-    opt formal_part >>= fun formal -> word "return" >> (subtype_mark()))
-*)
+  (word "procedure" >> defining_program_unit_name >>= fun name ->
+    opt formal_part >>= fun formal -> return @@ SpecProc(name,formal))
+  <|> (word "function" >> defining_designator >>= fun def ->
+    opt formal_part >>= fun formal ->
+    word "return" >> subtype_mark() >>= fun ret ->
+    return @@ SpecFunc(def,formal,ret))
+
 
 (**========from 3**)
 let basic_declarative_item : unit parser = todo "basic_declarative_item"

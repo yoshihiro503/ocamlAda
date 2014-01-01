@@ -15,6 +15,8 @@ type numeric =
 
 type selector_name = string
 type direct_name = string
+type identifier = string
+type operator_symbol = string
 
 type aop = Add | Sub | BitAnd
 type mop = Mult | Div | Mod | Rem
@@ -35,7 +37,7 @@ and prefix = Prefix of name
 and subtype_mark = SubtypeMark of name
 and fname = FName of name
 and attribute =
-  | AIdent of string * expression option
+  | AIdent of identifier * expression option
   | AAccess | ADelta | ADigit
 and comp_choice_list =
   | CCLOthers
@@ -137,6 +139,21 @@ type mode =
 type param_type_spec =
   | PSMode of mode * subtype_mark
   | PSAccess of subtype_mark
+type param_spec = identifier list * param_type_spec * expression option
+type formal = param_spec list
+
+(*==================10*)
+type parent_unit_name = ParentUnit of name
+(*==================10*)
+type def_program_unit_name = parent_unit_name option * identifier
+
+type defining_designator =
+  | DdesUname of def_program_unit_name
+  | DdesSymb of operator_symbol
+
+type subprogram_spec =
+  | SpecProc of def_program_unit_name * formal option
+  | SpecFunc of defining_designator * formal option * subtype_mark
 
 (** 8. Visibility Rules **)
 type package_name = PackageName of name
@@ -147,7 +164,6 @@ type use_clause =
 
 (** 9. Tasks and Synchronization **)
 (** 10. Program Structure and Compilation Issues **)
-type parent_unit_name = ParentUnit of name
 
 type library_unit_name = LibraryUnit of name
 
