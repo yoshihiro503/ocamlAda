@@ -8,11 +8,12 @@ BYTE_ENABLED = true
 OCAMLINCLUDES +=
 
 LIBFILES[] =
-       util
-       llist
-       parserMonad
-       ast
-       parser
+	util
+	llist
+	parserMonad
+	ast
+	context
+	parser
 
 LIB = lib
 

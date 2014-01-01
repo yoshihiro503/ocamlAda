@@ -7,11 +7,15 @@ let is_some = function Some _ -> true | None -> false
 
 let sep2 s p =
   p >>= fun x -> many1 (s >> p) >>= fun xs -> return (x :: xs)
+let sguard f =
+  (return () |> with_state) >>= fun ((), ctx) -> guard (f ctx)
 
-type context = unit
-type 'a parser = (context,'a) ParserMonad.t
+module C = Context
+
+
+type 'a parser = (Context.t, 'a) ParserMonad.t
 let sep = ()
-let todo s : 'a parser = print_endline ("TODO: "^s); error s
+let todo s : 'a parser = print_endline ("-- TODO: "^s); error s
 
 module SpecialChar = struct
   let space = char ' '
@@ -33,7 +37,7 @@ let token p =
   many (line_comment <|> white1) >>
   return x
 
-let token_char c = token (char c)
+let token_char c = token (char c) ^? (!%"token'%c'" c)
 
 let popen = token_char '('
 let pclose = token_char ')'
@@ -68,7 +72,7 @@ let graphic_character =
   <|> SpecialChar.space <|> SpecialChar.iso_10646_BMP
 
 let numeral =
-  sep1 (token_char '_') digit >>= (return $ string_of_chars)
+  sep1 (opt (token_char '_')) digit >>= (return $ string_of_chars)
 
 let exponent =
   let plusminus =
@@ -135,7 +139,7 @@ let defining_identifier = identifier
 let rec subtype_indication () =
   subtype_mark() >>= fun n -> opt (constraint_()) >>= fun c -> return(n,c)
 
-and subtype_mark () = name()
+and subtype_mark () = name() |> map (fun n -> SubtypeMark n) (*TODO*)
 
 and constraint_ () =
   (range_constraint() >>= fun r -> return @@ CoRange r)
@@ -181,11 +185,11 @@ and discrete_choice () =
 
 (** 4. Names and Expressions **)
 and name () =
-  let name_next prefix =
-    (*explicit_dereference*)
-    (token_char '.' >> keyword "all" >> return @@ NExplicitDeref prefix)
+  name_() >>= fun n -> print_endline ("Name: "^sname n); return n
+and name_ () : name parser =
+  let prefix_next prefix =
     (*indexed_component*)
-    <|> (popen >> sep1(token_char '.')(expression()) << pclose >>= fun es -> return @@ NIndexedComp(prefix, es))
+    (popen >> sep1(token_char '.')(expression()) << pclose >>= fun es -> return @@ NIndexedComp(prefix, es))
     (*slice*)
     <|> (popen >> discrete_range() << pclose >>= fun dr ->
          return @@ NSlice(prefix, dr))
@@ -195,21 +199,41 @@ and name () =
     (*attribute_reference*)
     <|> (token_char '\'' >> attribute_designator() >>= fun attr ->
          return @@ NAttrRef(prefix, attr))
-    (*type_conversion*)
-    <|> (popen >> expression() >>= fun expr ->
-         return @@ NTypeConv (prefix, expr))
-    (*function_call*) (*仕様では(params)がない場合も規定しているが、実際それはnameと区別できない。*)
-    <|> (actual_parameter_part() >>= fun params ->
-         return @@ NFunCall (prefix, Some params))
   in
-  let rec name_nexts prevname =
-    (name_next prevname >>= fun n -> name_nexts n)
+  let name_next prename =
+    (*explicit_dereference*)
+    (token_char '.' >> keyword "all" >> return @@ NExplicitDeref prename)
+  in
+  let submark_next submark =
+    (*type_conversion*)
+    (popen >> expression() >>= fun expr ->
+     return @@ NTypeConv (submark, expr))
+  in
+  let fname_next fname =
+    (*function_call*)
+    actual_parameter_part() >>= fun params ->
+    return @@ NFunCall (fname, Some params)
+  in
+  let next ctx (prename : name) =
+    if C.is_fname ctx prename then
+      fname_next (FName prename)
+    else if C.is_submark ctx prename then
+      submark_next (SubtypeMark prename)
+    else if C.is_prefix ctx prename then
+      prefix_next (Prefix prename)
+    else
+      name_next prename
+  in
+  let rec name_nexts ctx (prevname : name) : name parser =
+    (next ctx prevname >>= fun n -> name_nexts ctx n)
     <|> return prevname
   in
-  (direct_name >>= fun d -> name_nexts (NDirect d))
-  <|> (character_literal >>= fun c -> name_nexts (NChar c))
-
-and prefix () = name()
+  ((direct_name |> with_state) >>= fun (d,ctx) -> name_nexts ctx (NDirect d)) <|> ((character_literal |>with_state) >>= fun (c,ctx) -> name_nexts ctx (NChar c))
+    ^? "name"
+and prefix () =
+  name() >>= fun n ->
+  sguard (fun ctx -> C.is_prefix ctx n) >>
+  return @@ Prefix n
 
 and attribute_designator () : attribute parser =
   (word "Access" >> return AAccess)
@@ -349,12 +373,20 @@ and delta_constraint() =
   
 (** 5. Statements **)
 
+let precedure_name =
+  name() >>= fun n -> sguard (fun ctx -> C.is_precedure ctx n) >>
+  return @@ ProcName n  
+  
 let simple_statement =
+  let pname =
+    (precedure_name |> map (fun p -> PNProcName p))
+    <|> (prefix() |> map (fun pre -> PNPrefix pre))
+  in
   (* TODO null *)
   (* TODO assignment *)
   (* TODO exit *)
   (* TODO goto *)
-  (name() >>= fun n ->
+  (pname >>= fun n ->
    opt (actual_parameter_part()) << token_char ';' >>= fun ps ->
    return @@ StProcCall(n, ps))
   (* TODO return *)
@@ -432,27 +464,33 @@ let subprogram_body =
 let package_body = todo "package_body"
 
 (** 8. **)
-let package_name = name() ^?"package_name"
+let package_name =
+  name() >>= fun n -> sguard (fun ctx -> C.is_package ctx n) >>
+  return @@ PackageName n
 
 let use_clause =
   word "use" >>
   begin
-    comsep1 package_name
-    <|> (word "type" >> comsep1 (subtype_mark ()))
+    (comsep1 package_name >>= fun ps -> return @@ UCPackage ps)
+    <|> (word "type" >> comsep1 (subtype_mark ()) >>= fun ss -> return @@ UCType ss)
   end << token_char ';'
   
 
 
 (** 10. Program Structure and Compilation Issues **)
 let with_clause =
-  let library_unit_name = name() in
+  let library_unit_name = name() >>= fun n ->
+    sguard (fun ctx -> C.is_libraryunit ctx n) >>
+    return @@ LibraryUnit n
+  in
   word "with" >>
-  comsep1 library_unit_name >>= fun lu_names ->
+  comsep1 library_unit_name ^? "libsep" >>= fun lu_names ->
   token_char ';' >>
   return (lu_names)
 
 let context_clause =
-  many (with_clause <|> use_clause)
+  many ((with_clause |> map (fun wc -> WithClause wc))
+        <|> (use_clause |> map (fun uc -> UseClause uc)))
 
 let library_unit_declaration : unit parser = todo "library_unit_declaration"
 
@@ -475,7 +513,7 @@ let compilation =
     context_clause >>= fun cc ->
     (library_item <|> subunit)
   in
-  many compilation_unit
+  many1 compilation_unit
 
 let init_context = ()
 let run_ch ch =

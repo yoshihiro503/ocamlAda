@@ -22,14 +22,15 @@ type name =
   | NDirect of direct_name
   | NChar of char
   | NExplicitDeref of name
-  | NIndexedComp of name * expression list
-  | NSlice of name * discrete_range
-  | NSelectedComp of name * selector_name
-  | NAttrRef of name * attribute
+  | NIndexedComp of prefix * expression list
+  | NSlice of prefix * discrete_range
+  | NSelectedComp of prefix * selector_name
+  | NAttrRef of prefix * attribute
   | NTypeConv of subtype_mark * expression
-  | NFunCall of name * param_assoc list option
-and prefix = name
-and subtype_mark = name
+  | NFunCall of fname * param_assoc list option
+and prefix = Prefix of name
+and subtype_mark = SubtypeMark of name
+and fname = FName of name
 and attribute =
   | AIdent of string * expression option
   | AAccess | ADelta | ADigit
@@ -95,11 +96,41 @@ and expression =
 and param_assoc = selector_name option * expression
 and static_expr = expression
 
+let rec sname = function
+  | NDirect dn -> dn
+  | NChar c -> !%"'%c'" c
+  | NExplicitDeref name -> !%"ExpDref(%s)" (sname name)
+  | NIndexedComp (prefix, es) -> !%"NIdxCp(%s,[..])" (sprefix prefix)
+  | NSlice (prefix, discrete_range) -> "NSlice"
+  | NSelectedComp (prefix, selector_name) -> (!%"NSelComp(%s, %s)" (sprefix prefix) selector_name)
+  | NAttrRef (prefix, attribute) -> "NAttrRef"
+  | NTypeConv (subtype_mark, expression) -> "NTypeConv"
+  | NFunCall (fname, params) -> "NFunCall"
+and sprefix (Prefix n) = sname n
+
+
+type proc_name = ProcName of name
+type pname =
+  | PNPrefix of prefix
+  | PNProcName of proc_name
 type statement =
 (*TODO*)
-  | StProcCall of name * param_assoc list option
+  | StProcCall of pname * param_assoc list option
 (*TODO*)
 
 type exc_handler = unit(*TODO*)
 type handled_statements =
   | HandledStatements of statement list * exc_handler list option
+
+type package_name = PackageName of name
+
+type use_clause =
+  | UCPackage of package_name list
+  | UCType of subtype_mark list
+
+type library_unit_name = LibraryUnit of name
+
+type with_clause = library_unit_name list
+type context_clause =
+  | WithClause of with_clause
+  | UseClause of use_clause

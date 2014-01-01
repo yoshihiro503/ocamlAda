@@ -167,6 +167,12 @@ let update_state (f: 'res -> 'res) : ('res, 'a) t -> ('res, 'a) t =
   | Inl (x, (pos,res), ts') -> Inl (x, (pos, f res), ts')
   | Inr (state, msg) -> Inr (state, msg)
 
+let with_state : ('res, 'a) t -> ('res, 'a * 'res) t =
+  fun p state ts ->
+  match p state ts with
+  | Inl (x, (pos,res), ts') -> Inl ((x,res), (pos,res), ts')
+  | Inr e -> Inr e 
+
 let init_pos : pos = (1, 0, ([],'_',[]))
 let init_state res = (init_pos,res)
 
