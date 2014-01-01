@@ -505,19 +505,24 @@ let handled_sequence_of_statements =
 (**========from 11**)
 
 let designator =
-  opt (parent_unit_name << token_char '.') >>= fun n ->
+  opt (parent_unit_name << token_char '.') >*<
   (identifier <|> operator_symbol)
 
 let subprogram_body =
   subprogram_specification >>= fun spec ->
   word "is" >>
-  declarative_part >>= fun decl ->
+  declarative_part >>= fun decls ->
   word "begin" >>
   handled_sequence_of_statements >>= fun stats ->
   word "end" >>
   opt designator >>= fun design ->
   token_char ';' >>
-  return stats
+  return {
+    spec = spec;
+    declarative = decls;
+    statements = stats;
+    designator = design;
+  }
 
 (** 7. Packages **)
 
@@ -559,16 +564,20 @@ let subunit = error "subunit"
 let compilation =
   let compilation_unit =
     let library_item =
-      let library_unit_declaration: handled_statements parser = todo "library_unit_declaration" in
-      let library_unit_body : handled_statements parser =
-        subprogram_body <|> package_body
+      let library_unit_declaration = todo "library_unit_declaration" in
+      let library_unit_body =
+        (subprogram_body >>= fun subp -> return @@ LibBody_Subprog subp)
+        <|> (package_body >>= fun pack -> return @@ LibBody_Package pack)
       in
       let library_unit_renaming_declaration =
         todo "library_unit_renaming_declaration"
       in
-      (opt (word "private") >>= fun private_ -> library_unit_declaration)
+      (opt (word "private") >*< library_unit_declaration >>= fun (priv,decl) ->
+       return @@ LibDecl(is_some priv, decl))
       <|> library_unit_body
-      <|> (opt (word "private") >>= fun private_ -> library_unit_renaming_declaration)
+      <|> (opt (word "private") >*< library_unit_renaming_declaration
+             >>= fun (priv, ren) ->
+           return @@ LibRenameDecl(is_some priv, ren))
     in
     context_clause >>= fun cc ->
     (library_item <|> subunit)

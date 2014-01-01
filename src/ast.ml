@@ -11,12 +11,15 @@ type numeric =
   | NumDecimal of intpart * fracpart option * exponent option
   | NumBased of base * intpart * fracpart option * exponent option
 
+type declarative_elem = unit(*TODO*)
+
 (** 4. Names and Expressions **)
 
 type selector_name = string
 type direct_name = string
 type identifier = string
 type operator_symbol = string
+type ident_or_opsymb = string
 
 type aop = Add | Sub | BitAnd
 type mop = Mult | Div | Mod | Rem
@@ -145,6 +148,9 @@ type formal = param_spec list
 (*==================10*)
 type parent_unit_name = ParentUnit of name
 (*==================10*)
+
+type designator = parent_unit_name option * ident_or_opsymb
+
 type def_program_unit_name = parent_unit_name option * identifier
 
 type defining_designator =
@@ -154,6 +160,22 @@ type defining_designator =
 type subprogram_spec =
   | SpecProc of def_program_unit_name * formal option
   | SpecFunc of defining_designator * formal option * subtype_mark
+
+(*==================11*)
+type exc_handler = unit(*TODO*)
+type handled_statements =
+  | HandledStatements of seq_statements * exc_handler list option
+(*==================11*)
+
+type subprogram_body = {
+    spec : subprogram_spec;
+    declarative : declarative_elem list;
+    statements : handled_statements;
+    designator : designator option;
+  }
+
+(** 7. Packages **)
+type package_body = unit(*TODO*)
 
 (** 8. Visibility Rules **)
 type package_name = PackageName of name
@@ -173,8 +195,10 @@ type context_clause =
   | WithClause of with_clause
   | UseClause of use_clause
 
-(** 11. Exceptions **)
-type exc_handler = unit(*TODO*)
-type handled_statements =
-  | HandledStatements of seq_statements * exc_handler list option
+type library_item =
+  | LibDecl of bool * unit(*TODO*)
+  | LibBody_Subprog of subprogram_body
+  | LibBody_Package of package_body
+  | LibRenameDecl of bool * unit(*TODO*)
 
+(** 11. Exceptions **)
