@@ -530,14 +530,16 @@ let local_name =
 
 let representation_clause =
   let for_ = word "for" in
+  (* at_clause *)
+  (for_ >> direct_name >*< (word"use">>word"at">> expression() <<semicolon) >>=
+   fun (n,e) -> return @@ ReprAt(n,e))
+  (*TODO enumeration_representation_clause *)
+  (*TODO  record_representation_clause *)
   (* attribute_definition_clause *)
-  (for_ >> local_name >>= fun lname ->
+  <|> (for_ >> local_name >>= fun lname ->
    token_char '\'' >> attribute_designator() >>= fun attr ->
    word "use" >> expression() >>= fun e ->
    return @@ ReprAttr(lname,attr,e))
-  (*TODO enumeration_representation_clause *)
-  (*TODO  record_representation_clause *)
-  (*TODO  at_clause *)
 
 (** {2:c C} *)
 (** {2:d D} *)

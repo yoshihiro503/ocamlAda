@@ -213,3 +213,4 @@ type local_name =
 
 type repr_clause =
   | ReprAttr of local_name * attribute * expression
+  | ReprAt of direct_name * expression
