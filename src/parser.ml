@@ -530,11 +530,15 @@ let local_name =
 
 let representation_clause =
   let for_ = word "for" in
+  let first_subtype_local_name = direct_name in
+  let enumeration_aggregate = array_aggregate() in
   (* at_clause *)
   (for_ >> direct_name >*< (word"use">>word"at">> expression() <<semicolon) >>=
    fun (n,e) -> return @@ ReprAt(n,e))
-  (*TODO enumeration_representation_clause *)
   (*TODO  record_representation_clause *)
+  (* enumeration_representation_clause *)
+  <|> (for_ >> first_subtype_local_name << word"use" >*< enumeration_aggregate
+       << semicolon >>= fun (n,aggr) -> return @@ ReprEnum(n,aggr))
   (* attribute_definition_clause *)
   <|> (for_ >> local_name >>= fun lname ->
    token_char '\'' >> attribute_designator() >>= fun attr ->

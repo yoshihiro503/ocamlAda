@@ -211,6 +211,11 @@ type local_name =
   | LocalAttr of direct_name * attribute
   | LocalLib of library_unit_name
 
+type first_subtype_local_name = direct_name
+type enum_aggregate = array_aggregate
+
 type repr_clause =
   | ReprAttr of local_name * attribute * expression
   | ReprAt of direct_name * expression
+  | ReprEnum of first_subtype_local_name * enum_aggregate
+  | ReprRecord
