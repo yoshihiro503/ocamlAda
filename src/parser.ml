@@ -724,6 +724,23 @@ let representation_clause =
 
 (** {2:c C} *)
 
+(** {3:c3 C 3. } *)
+
+let rec basic_declaration () = todo "basic_declaration"
+
+and basic_declarative_item () = todo "basic_declarative_item"
+
+(** {3:c7 C 7. } *)
+
+and package_declaration () = todo "package_declaration"
+
+and package_specification () = todo "package_specification"
+
+(** {3:c12 C 12. } *)
+
+and generic_declaration () = todo "generic_declaration"
+
+(** {2:cc CC} *)
 (** {3:cc10 CC 10. Program Structure and Compilation Issues} *)
 
 let library_unit_declaration : unit parser = todo "library_unit_declaration"
