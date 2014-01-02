@@ -418,8 +418,24 @@ let type_declaration =
          >>=- fun (a,b) -> TDefInt_Range(a, b))
         <|> (word"mod">> expression() >>=- fun e -> TDefInt_Mod e)
       in
+      let real_type_definition =
+        let range =
+          word"range">> simple_expression() <<symbol".." >*< simple_expression()
+        in
+        (*floating_poing_definition*)
+        (word"digits">> expression() >*< opt range >>=- fun (e, r) ->
+         TDefReal_Float(e, r))
+        (* decimal_fixed_point_definition *)
+        <|> (word"delta">> expression() >>= fun e ->
+          word"digits">> expression() >>= fun d ->
+          opt range >>= fun r -> return @@ TDefReal_DecFixp(e, r))
+        (* ordinary_fixed_point_definition *)
+        <|> (word"delta">> expression() >*< opt range >>=- fun (e, r) ->
+          TDefReal_OrdFixp(e, r))
+      in
       enumeration_type_definition
       <|> integer_type_definition
+      <|> real_type_definition
       (*TODO*)
     in
     (defining_identifier >>= fun id -> opt known_discriminant_part >>= fun d ->

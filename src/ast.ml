@@ -129,6 +129,9 @@ type type_def =
   | TDefEnum of enum_lit_spec list
   | TDefInt_Range of simple_expr * simple_expr
   | TDefInt_Mod of expression
+  | TDefReal_Float of expression * (simple_expr * simple_expr) option
+  | TDefReal_OrdFixp of expression * (simple_expr * simple_expr) option
+  | TDefReal_DecFixp of expression * (simple_expr * simple_expr) option
   (*TODO*)
 
 type full_type_decl =
