@@ -423,6 +423,10 @@ let array_type_definition =
     pclose>> word"of">> component_definition >>= fun comp ->
     return @@ ArrTypeUncon(is, comp))
 
+let record_definition =
+  (word "null">> word "record" >>- NullRecord)
+  (*TODO*)
+
 let type_declaration =
   let full_type_declaration =
     let type_definition =
@@ -454,10 +458,16 @@ let type_declaration =
         <|> (word"delta">> expression() >*< opt range >>=- fun (e, r) ->
           TDefReal_OrdFixp(e, r))
       in
+      let record_type_definition =
+        opt (opt (word"abstract") << word"tagged") >>= fun abs_tag ->
+        opt (word"limited") >>= fun lim -> record_definition >>= fun r ->
+        return @@ TDefRecord(Option.map is_some abs_tag, is_some lim, r)
+      in
       enumeration_type_definition
       <|> integer_type_definition
       <|> real_type_definition
       <|> (array_type_definition >>=- fun a -> TDefArray a)
+      <|> record_type_definition
       (*TODO*)
     in
     (word"type">> defining_identifier >>= fun id ->

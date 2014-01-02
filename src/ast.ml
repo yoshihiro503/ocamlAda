@@ -132,6 +132,9 @@ type array_type_def =
   | ArrTypeConst of discrete_subtype_def list * comp_def
   | ArrTypeUncon of (subtype_mark * range) list * comp_def
 
+type record_def = (*TODO*)
+  | NullRecord
+
 type enum_lit_spec =
   | ELIdent of identifier
   | ELChar of char
@@ -143,6 +146,7 @@ type type_def =
   | TDefReal_OrdFixp of expression * (simple_expr * simple_expr) option
   | TDefReal_DecFixp of expression * (simple_expr * simple_expr) option
   | TDefArray of array_type_def
+  | TDefRecord of bool option * bool * record_def
   (*TODO*)
 
 type full_type_decl =
