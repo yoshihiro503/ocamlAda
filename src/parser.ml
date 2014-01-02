@@ -446,6 +446,7 @@ let access_type_definition =
 
 (*====================9*)
 let task_definition = todo "task_definition"
+let protected_definition = todo " protected_definition"
 (*====================9*)
 
 let type_declaration =
@@ -508,7 +509,11 @@ let type_declaration =
       opt known_discriminant_part >>= fun d ->
       opt (word"is">> task_definition) >>= fun task -> semicolon>>
       return @@ FTDeclTask(id, d, task))
-    (*TODO protected_type_declaration *)
+    (* protected_type_declaration *)
+    <|> (word "protected">> word"type">> defining_identifier >>= fun id ->
+      opt known_discriminant_part >>= fun d ->
+      word "is">> protected_definition >>= fun pdef -> semicolon>>
+      return @@ FTDeclProtected(id, d, pdef))
   in
   (full_type_declaration >>=- fun ft -> TDeclFull ft)
       

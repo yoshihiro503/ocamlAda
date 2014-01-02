@@ -158,12 +158,13 @@ type type_def =
 
 (*============9*)
 type task_def = unit(*TODO*)
+type protected_def = unit(*TODO*)
 (*============9*)
 
 type full_type_decl =
   | FTDeclType of identifier * discrim_spec list option * type_def
   | FTDeclTask of identifier * discrim_spec list option * task_def option
-  | FTDeclProtected(*TODO*)
+  | FTDeclProtected of identifier * discrim_spec list option * protected_def
 
 type type_decl =
   | TDeclFull of full_type_decl
