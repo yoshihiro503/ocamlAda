@@ -10,6 +10,8 @@ let sep2 s p =
   p >>= fun x -> many1 (s >> p) >>= fun xs -> return (x :: xs)
 let sguard f =
   (return () |> with_state) >>= fun ((), ctx) -> guard (f ctx)
+let (>>=-) p f = p >>= fun x -> return (f x)
+let (>>-) p x = p >> return x
 
 type 'a parser = (Context.t, 'a) ParserMonad.t
 let sep = ()
@@ -223,8 +225,8 @@ and name_ () : name parser =
     return @@ NFunCall (fname, Some params)
   in
   let next ctx (prename : name) =
-    if C.is_fname ctx prename then
-      fname_next (FName prename)
+    if C.is_function ctx prename then
+      fname_next (FunName prename)
     else if C.is_submark ctx prename then
       submark_next (SubtypeMark prename)
     else if C.is_prefix ctx prename then
@@ -391,16 +393,18 @@ let defining_identifier_list = comsep1 defining_identifier
 (** {3:bb5 BB 5. Statements} *)
 
 (** =============6*)
-let precedure_name =
-  name() >>= fun n -> sguard (fun ctx -> C.is_precedure ctx n) >>
+let procedure_name =
+  name() >>= fun n -> sguard (fun ctx -> C.is_procedure ctx n) >>
   return @@ ProcName n  
 (** =============6*)
 
-let variable_name = name()
+let variable_name =
+  name() >>= fun n -> sguard (fun ctx -> C.is_variable ctx n) >>
+  return @@ VarName n
   
 let simple_statement : statement_elem parser =
   let pname =
-    (precedure_name |> map (fun p -> PNProcName p))
+    (procedure_name |> map (fun p -> PNProcName p))
     <|> (prefix() |> map (fun pre -> PNPrefix pre))
   in
   (* null_statement *)
@@ -432,6 +436,10 @@ let label =
   return @@ Label id
 
 (** {3:bb6 BB 6. Subprograms} *)
+
+let function_name =
+  name() >>= fun n -> sguard (fun ctx -> C.is_function ctx n) >>
+  return @@ FunName n
 
 (**======from 10 **)
 let parent_unit_name =
@@ -495,6 +503,10 @@ let use_clause =
   
 (** {3:bb9 BB 9.} *)
 
+let entry_name =
+  name() >>= fun n -> sguard(fun ctx -> C.is_entry ctx n) >>
+  return @@ EntryName n
+
 (** {3:bb10 BB 10. Program Structure and Compilation Issues} *)
 
 let library_unit_name = name() >>= fun n ->
@@ -510,6 +522,34 @@ let with_clause =
 let context_clause =
   many ((with_clause |> map (fun wc -> WithClause wc))
         <|> (use_clause |> map (fun uc -> UseClause uc)))
+
+(** {3:bb12 BB 12.} *)
+
+let generic_actual_part =
+  let generic_association =
+    opt (selector_name << symbol "=>") >>= fun sel ->
+    begin
+      (variable_name >>=- fun x -> GAsVar x)
+      <|> (procedure_name >>=- fun x -> GAsProc x)
+      <|> (function_name >>=- fun x -> GAsFunc x)
+      <|> (entry_name >>=- fun x -> GAsEntry x)
+      <|> (subtype_mark() >>=- fun x -> GAsSubtype x)
+      <|> (package_name >>=- fun x -> GAsPackage x)
+      <|> (expression() >>=- fun e -> GAsExpr e)
+    end >>=- fun assoc -> (sel, assoc)
+  in
+  popen>> comsep1 generic_association <<pclose
+
+let generic_instantiation =
+  (word "package">> defining_program_unit_name >>= fun name ->
+   word "is">> word "new" >> package_name >>= fun pname ->
+   opt generic_actual_part >>= fun act -> semicolon >>
+   return @@ GInstPackage(name,pname,act))
+  <|> (word "procedure" >> defining_program_unit_name >>= fun name ->
+    word "is">> word "new" >> procedure_name >>= fun pname ->
+    opt generic_actual_part >>= fun act -> semicolon >>
+    return @@ GInstProc(name,pname,act))
+(*  <|> TODO*)
 
 (** {3:bb13 BB 13.Representation Clauses and Implementation-Dependent Features} *)
 

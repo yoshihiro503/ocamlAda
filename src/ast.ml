@@ -35,10 +35,10 @@ type name =
   | NSelectedComp of prefix * selector_name
   | NAttrRef of prefix * attribute
   | NTypeConv of subtype_mark * expression
-  | NFunCall of fname * param_assoc list option
+  | NFunCall of function_name * param_assoc list option
 and prefix = Prefix of name
 and subtype_mark = SubtypeMark of name
-and fname = FName of name
+and function_name = FunName of name
 and attribute =
   | AIdent of identifier * expression option
   | AAccess | ADelta | ADigit
@@ -113,7 +113,7 @@ let rec sname = function
   | NSelectedComp (prefix, selector_name) -> (!%"NSelComp(%s, %s)" (sprefix prefix) selector_name)
   | NAttrRef (prefix, attribute) -> "NAttrRef"
   | NTypeConv (subtype_mark, expression) -> "NTypeConv"
-  | NFunCall (fname, params) -> "NFunCall"
+  | NFunCall (function_name, params) -> "NFunCall"
 and sprefix (Prefix n) = sname n
 
 (** 5. Statements **)
@@ -121,22 +121,22 @@ type condition = expression
 
 type statement_identifier = direct_name
 type label = Label of statement_identifier
-type var_name = name
+type variable_name = VarName of name
 
 type seq_statements = (label list * statement_elem) list
 and statement_elem =
 (*TODO simple_statement *)
   | StNull
-  | StAssign of var_name * expression
+  | StAssign of variable_name * expression
   | StProcCall of pname * param_assoc list option
   | StReturn of expression option
 (*TODO compound_statement *)
   | StIf of (condition * seq_statements) list * seq_statements option
 (** 6. Subprograms **)
-and proc_name = ProcName of name
+and procedure_name = ProcName of name
 and pname =
   | PNPrefix of prefix
-  | PNProcName of proc_name
+  | PNProcName of procedure_name
 
 type mode =
   | NoMode | In | Out | InOut
@@ -186,6 +186,9 @@ type use_clause =
   | UCType of subtype_mark list
 
 (** 9. Tasks and Synchronization **)
+
+type entry_name = EntryName of name
+
 (** 10. Program Structure and Compilation Issues **)
 
 type library_unit_name = LibraryUnit of name
@@ -203,6 +206,25 @@ type library_item =
   | LibRenameDecl of bool * unit(*TODO*)
 
 (** 11. Exceptions **)
+
+(** 12. Generic Units *)
+
+type dfp_unit_name = parent_unit_name option * identifier
+
+type gen_assoc0 =
+  | GAsExpr of expression
+  | GAsVar of variable_name
+  | GAsProc of procedure_name
+  | GAsFunc of function_name
+  | GAsEntry of entry_name
+  | GAsSubtype of subtype_mark
+  | GAsPackage of package_name
+type gen_assoc = selector_name option * gen_assoc0
+
+type generic_inst =
+(*TODO*)
+  | GInstPackage of dfp_unit_name * package_name * gen_assoc list option
+  | GInstProc of dfp_unit_name * procedure_name * gen_assoc list option
 
 (** 13.Representation Clauses and Implementation-Dependent Features *)
 
