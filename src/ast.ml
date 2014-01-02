@@ -155,11 +155,14 @@ type type_def =
   | TDefRecord of bool option * bool * record_def
   | TDefAcc of access_type_def
   | TDefDerived of bool * subtype_ind * record_def option
-  (*TODO*)
+
+(*============9*)
+type task_def = unit(*TODO*)
+(*============9*)
 
 type full_type_decl =
   | FTDeclType of identifier * discrim_spec list option * type_def
-  | FTDeclTask(*TODO*)
+  | FTDeclTask of identifier * discrim_spec list option * task_def option
   | FTDeclProtected(*TODO*)
 
 type type_decl =

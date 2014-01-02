@@ -444,6 +444,10 @@ let access_type_definition =
     word "function" >> parameter_and_result_profile >>= fun p ->
     return @@ AccTySubprogFunc(is_some prot, p))
 
+(*====================9*)
+let task_definition = todo "task_definition"
+(*====================9*)
+
 let type_declaration =
   let full_type_declaration =
     let type_definition =
@@ -499,7 +503,12 @@ let type_declaration =
      opt known_discriminant_part >>= fun d ->
      word "is">> type_definition >>= fun tdef -> semicolon>>
      return @@ FTDeclType(id, d, tdef))
-    (*TODO*)
+    (* task_type_declaration *)
+    <|> (word "task">> word"type">> defining_identifier >>= fun id ->
+      opt known_discriminant_part >>= fun d ->
+      opt (word"is">> task_definition) >>= fun task -> semicolon>>
+      return @@ FTDeclTask(id, d, task))
+    (*TODO protected_type_declaration *)
   in
   (full_type_declaration >>=- fun ft -> TDeclFull ft)
       
