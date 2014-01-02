@@ -386,8 +386,34 @@ and delta_constraint() =
 (** {3:bb3 BB 3.} *)
 
 let default_expression = expression()
-let access_definition = word "access" >> subtype_mark()
+let access_definition =
+  word "access" >> subtype_mark() >>=- fun ty -> Access ty
 let defining_identifier_list = comsep1 defining_identifier
+
+let known_discriminant_part =
+  let discriminant_specification =
+    defining_identifier_list >>= fun ids -> token_char ':' >>
+    (subtype_mark() >>= fun subty ->
+     opt (symbol":=">> default_expression) >>=- fun e ->
+     DSpecSubtype(ids, subty, e))
+    <|> (access_definition >>= fun acc ->
+     opt (symbol":=">> default_expression) >>=- fun e ->
+     DSpecAccess(ids, acc, e))
+  in
+  popen>> comsep1 discriminant_specification <<pclose
+
+let type_declaration =
+  let full_type_declaration =
+    let type_definition = todo "type_def"
+    in
+    (defining_identifier >>= fun id -> opt known_discriminant_part >>= fun d ->
+     word "is">> type_definition >>= fun tdef -> semicolon>>
+     return @@ FTDeclType(id, d, tdef))
+    (*TODO*)
+  in
+  (full_type_declaration >>=- fun ft -> TDeclFull ft)
+      
+
 
 
 (** {3:bb5 BB 5. Statements} *)

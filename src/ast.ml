@@ -13,7 +13,7 @@ type numeric =
 
 type declarative_elem = unit(*TODO*)
 
-(** 4. Names and Expressions **)
+(** 3., 4. *)
 
 type selector_name = string
 type direct_name = string
@@ -116,6 +116,27 @@ let rec sname = function
   | NFunCall (function_name, params) -> "NFunCall"
 and sprefix (Prefix n) = sname n
 
+type access_def = Access of subtype_mark
+
+type discrim_spec =
+  | DSpecSubtype of identifier list * subtype_mark * expression option
+  | DSpecAccess of identifier list * access_def * expression option
+
+type type_def =
+  | TDefEnum(*TODO*)
+  (*TODO*)
+
+type full_type_decl =
+  | FTDeclType of identifier * discrim_spec list option * type_def
+  | FTDeclTask(*TODO*)
+  | FTDeclProtected(*TODO*)
+
+type type_decl =
+  | TDeclFull of full_type_decl
+  | TDeclIncomp(*TODO*)
+  | TDeclPriv(*TODO*)
+  | TDeclPrivExt(*TODO*)
+
 (** 5. Statements **)
 type condition = expression
 
@@ -142,7 +163,7 @@ type mode =
   | NoMode | In | Out | InOut
 type param_type_spec =
   | PSMode of mode * subtype_mark
-  | PSAccess of subtype_mark
+  | PSAccess of access_def
 type param_spec = identifier list * param_type_spec * expression option
 type formal = param_spec list
 
