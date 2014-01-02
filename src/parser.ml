@@ -413,7 +413,13 @@ let type_declaration =
         popen>> comsep1 enumeration_literal_specification <<pclose >>= fun es ->
         return @@ TDefEnum es
       in
+      let integer_type_definition =
+        (word"range">> simple_expression() <<symbol".." >*< simple_expression()
+         >>=- fun (a,b) -> TDefInt_Range(a, b))
+        <|> (word"mod">> expression() >>=- fun e -> TDefInt_Mod e)
+      in
       enumeration_type_definition
+      <|> integer_type_definition
       (*TODO*)
     in
     (defining_identifier >>= fun id -> opt known_discriminant_part >>= fun d ->

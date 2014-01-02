@@ -127,6 +127,8 @@ type enum_lit_spec =
   | ELChar of char
 type type_def =
   | TDefEnum of enum_lit_spec list
+  | TDefInt_Range of simple_expr * simple_expr
+  | TDefInt_Mod of expression
   (*TODO*)
 
 type full_type_decl =
