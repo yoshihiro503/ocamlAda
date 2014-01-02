@@ -402,6 +402,27 @@ let known_discriminant_part =
   in
   popen>> comsep1 discriminant_specification <<pclose
 
+let discrete_subtype_definition =
+  (subtype_indication() >>=- fun ind -> DiscSubtyInd ind)
+  <|> (range() >>=- fun r -> DiscSubtyRange r)
+
+let component_definition =
+  opt (word"aliased") >*< subtype_indication() >>=- fun (aliased, ind) ->
+  (is_some aliased, ind)
+
+let array_type_definition =
+  let index_subtype_definition =
+    subtype_mark() >*< range() << symbol "<>"
+  in
+  (* constrained_array_definition *)
+  (word"array">> popen>> comsep1 discrete_subtype_definition >>= fun ds ->
+   pclose>> word"of">> component_definition >>= fun comp ->
+   return @@ ArrTypeConst(ds, comp))
+  (* unconstrained_array_definition *)
+  <|> (word"array">> popen>> comsep1 index_subtype_definition>>= fun is ->
+    pclose>> word"of">> component_definition >>= fun comp ->
+    return @@ ArrTypeUncon(is, comp))
+
 let type_declaration =
   let full_type_declaration =
     let type_definition =
@@ -436,16 +457,18 @@ let type_declaration =
       enumeration_type_definition
       <|> integer_type_definition
       <|> real_type_definition
+      <|> (array_type_definition >>=- fun a -> TDefArray a)
       (*TODO*)
     in
-    (defining_identifier >>= fun id -> opt known_discriminant_part >>= fun d ->
+    (word"type">> defining_identifier >>= fun id ->
+     opt known_discriminant_part >>= fun d ->
      word "is">> type_definition >>= fun tdef -> semicolon>>
      return @@ FTDeclType(id, d, tdef))
     (*TODO*)
   in
   (full_type_declaration >>=- fun ft -> TDeclFull ft)
       
-
+  
 
 
 (** {3:bb5 BB 5. Statements} *)
