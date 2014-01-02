@@ -480,13 +480,20 @@ let type_declaration =
         opt (word"limited") >>= fun lim -> record_definition >>= fun r ->
         return @@ TDefRecord(Option.map is_some abs_tag, is_some lim, r)
       in
+      let derived_type_definition =
+        let record_extension_part = word"with" >> record_definition in
+        opt (word "abstract") >>= fun abs ->
+        word "new">> subtype_indication() >>= fun ind ->
+        opt record_extension_part >>= fun r ->
+        return @@ TDefDerived(is_some abs, ind, r)
+      in
       enumeration_type_definition
       <|> integer_type_definition
       <|> real_type_definition
       <|> (array_type_definition >>=- fun a -> TDefArray a)
       <|> record_type_definition
       <|> (access_type_definition >>=- fun a -> TDefAcc a)
-      (*TODO*)
+      <|> derived_type_definition
     in
     (word"type">> defining_identifier >>= fun id ->
      opt known_discriminant_part >>= fun d ->

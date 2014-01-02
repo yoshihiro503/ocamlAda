@@ -154,6 +154,7 @@ type type_def =
   | TDefArray of array_type_def
   | TDefRecord of bool option * bool * record_def
   | TDefAcc of access_type_def
+  | TDefDerived of bool * subtype_ind * record_def option
   (*TODO*)
 
 type full_type_decl =
