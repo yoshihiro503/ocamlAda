@@ -383,11 +383,6 @@ and delta_constraint() =
 
 (** {3:bb3 BB 3.} *)
 
-let basic_declarative_item : unit parser = todo "basic_declarative_item"
-let body = todo "body"
-let declarative_part =
-  many (basic_declarative_item <|> body)
-
 let default_expression = expression()
 let access_definition = word "access" >> subtype_mark()
 let defining_identifier_list = comsep1 defining_identifier
@@ -516,10 +511,6 @@ let context_clause =
   many ((with_clause |> map (fun wc -> WithClause wc))
         <|> (use_clause |> map (fun uc -> UseClause uc)))
 
-let library_unit_declaration : unit parser = todo "library_unit_declaration"
-
-let subunit = todo "subunit"
-
 (** {3:bb13 BB 13.Representation Clauses and Implementation-Dependent Features} *)
 
 let local_name =
@@ -559,7 +550,19 @@ let representation_clause =
    return @@ ReprAttr(lname,attr,e))
 
 (** {2:c C} *)
+
+(** {3:cc10 CC 10. Program Structure and Compilation Issues} *)
+
+let library_unit_declaration : unit parser = todo "library_unit_declaration"
+
 (** {2:d D} *)
+
+(** {3:d3 D 3.} *)
+
+let basic_declarative_item : unit parser = todo "basic_declarative_item"
+let body = todo "body"
+let declarative_part =
+  many (basic_declarative_item <|> body)
 
 (** {3:d5 D 5.} *)
 
@@ -619,6 +622,8 @@ let package_body = todo "package_body"
 (** {2:dd DD} *)
 
 (** {3:dd10 DD 10. Program Structure and Compilation Issues} *)
+
+let subunit = todo "subunit"
 
 let compilation =
   let compilation_unit =
