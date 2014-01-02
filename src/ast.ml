@@ -135,6 +135,8 @@ type array_type_def =
 type record_def = (*TODO*)
   | NullRecord
 
+type param_profile = unit(*TODO*)
+type param_and_result_profile = unit(*TODO*)
 type enum_lit_spec =
   | ELIdent of identifier
   | ELChar of char
@@ -147,6 +149,9 @@ type type_def =
   | TDefReal_DecFixp of expression * (simple_expr * simple_expr) option
   | TDefArray of array_type_def
   | TDefRecord of bool option * bool * record_def
+  | TDefAcc_Obj of string option * subtype_ind
+  | TDefAcc_SubprogProc of bool * param_profile
+  | TDefAcc_SubprogFunc of bool * param_and_result_profile
   (*TODO*)
 
 type full_type_decl =

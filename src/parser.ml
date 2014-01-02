@@ -423,6 +423,11 @@ let array_type_definition =
     pclose>> word"of">> component_definition >>= fun comp ->
     return @@ ArrTypeUncon(is, comp))
 
+(*===============6.*)
+let parameter_profile = todo "parameter_profile"
+let parameter_and_result_profile = todo "parameter_and_result_profile"
+(*===============6.*)
+
 let record_definition =
   (word "null">> word "record" >>- NullRecord)
   (*TODO*)
@@ -463,11 +468,23 @@ let type_declaration =
         opt (word"limited") >>= fun lim -> record_definition >>= fun r ->
         return @@ TDefRecord(Option.map is_some abs_tag, is_some lim, r)
       in
+      let access_type_definition =
+        (* access_to_object_definition *)
+        (word "access" >> opt (word "all" <|> word "constant") >>= fun ac ->
+         subtype_indication() >>=- fun ind -> TDefAcc_Obj(ac, ind))
+        <|> (word "access">> opt (word"protected") >>= fun prot ->
+          word "procedure" >> parameter_profile >>= fun prof ->
+          return @@ TDefAcc_SubprogProc(is_some prot, prof))
+        <|> (word "access">> opt (word"protected") >>= fun prot ->
+          word "function" >> parameter_and_result_profile >>= fun p ->
+          return @@ TDefAcc_SubprogFunc(is_some prot, p))
+      in
       enumeration_type_definition
       <|> integer_type_definition
       <|> real_type_definition
       <|> (array_type_definition >>=- fun a -> TDefArray a)
       <|> record_type_definition
+      <|> access_type_definition
       (*TODO*)
     in
     (word"type">> defining_identifier >>= fun id ->
