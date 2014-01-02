@@ -2,6 +2,7 @@
 open Util
 open ParserMonad
 open Ast
+module C = Context
 
 let is_some = function Some _ -> true | None -> false
 
@@ -9,9 +10,6 @@ let sep2 s p =
   p >>= fun x -> many1 (s >> p) >>= fun xs -> return (x :: xs)
 let sguard f =
   (return () |> with_state) >>= fun ((), ctx) -> guard (f ctx)
-
-module C = Context
-
 
 type 'a parser = (Context.t, 'a) ParserMonad.t
 let sep = ()
@@ -49,7 +47,10 @@ let comsep2 p = sep2 comma p
 let semsep1 p = sep1 semicolon p
 let symbol s = token(keyword s)
 
-(** 2. Lexical Elements **)
+(** {2:a A} *)
+
+(** {3:a2 A 2. Lexical Elements} *)
+
 let format_effector : char parser =
   char_when (function |'\x09'|'\x0b'|'\x0d'|'\x0a'|'\x0c'-> true | _ -> false)
 
@@ -128,14 +129,16 @@ let string_literal =
 
 let operator_symbol = string_literal
 
-(**=====**)
-let selector_name = (* sec. 4 *)
+(** {3:a4 A 4. } *)
+
+let selector_name =
   identifier <|> (character_literal |> map (String.make 1)) <|> operator_symbol
 let direct_name =
   identifier <|> operator_symbol
-(**=====**)
 
-(** 3. Declarations and Types **)
+(** {2:b B} *)
+(** {3:b3 B 3. Declarations and Types}*)
+
 let defining_identifier = identifier
 
 let rec subtype_indication () =
@@ -187,7 +190,8 @@ and discrete_choice () =
   <|> (discrete_range() >>= fun r -> return @@ DcRange r)
   <|> (word "others" >> return @@ DcOthers)
 
-(** 4. Names and Expressions **)
+(** {3:b4 B 4. Names and Expressions} *)
+
 and name () =
   name_() >>= fun n -> print_endline ("Name: "^sname n); return n
 and name_ () : name parser =
@@ -357,7 +361,8 @@ and expression () : expression parser =
        return @@ EOr rs)
   <|> (sep1 (word "xor") (relation ()) >>= fun rs -> return @@ EXor rs)
 
-(**=============6*)
+(** {3:b6 B 6. } *)
+
 and parameter_assoc () =
   opt (selector_name << symbol "=>") >>= fun sel ->
   expression() >>= fun expr ->
@@ -366,22 +371,35 @@ and actual_parameter_part () =
   popen >>
   comsep1 (parameter_assoc())
   << pclose
-(**=============6*)
 
-(**============13*)
+(** {3:b13 B 13. } *)
+
 and static_expression () = expression()
 and delta_constraint() =
   word"delta">> static_expression() >*< opt(range_constraint()) >>=
   fun (e, r) -> return @@ CoDelta(e, r)
-(**============13*)
   
-(** 5. Statements **)
+(** {2:bb BB} *)
 
-(**=============6*)
+(** {3:bb3 BB 3.} *)
+
+let basic_declarative_item : unit parser = todo "basic_declarative_item"
+let body = todo "body"
+let declarative_part =
+  many (basic_declarative_item <|> body)
+
+let default_expression = expression()
+let access_definition = word "access" >> subtype_mark()
+let defining_identifier_list = comsep1 defining_identifier
+
+
+(** {3:bb5 BB 5. Statements} *)
+
+(** =============6*)
 let precedure_name =
   name() >>= fun n -> sguard (fun ctx -> C.is_precedure ctx n) >>
   return @@ ProcName n  
-(**=============6*)
+(** =============6*)
 
 let variable_name = name()
   
@@ -416,36 +434,7 @@ let label =
   symbol "<<" >> statement_identifier << symbol ">>" >>= fun id ->
   return @@ Label id
 
-let rec compound_statement () =
-  (* if_statememtn *)
-  (word "if" >>
-   sep1 (word "elsif") begin
-     condition >>= fun cond -> word "then" >>
-     sequence_of_statements() >>= fun st ->
-     return (cond, st)
-   end >>= fun ss ->
-   opt (word "else" >> sequence_of_statements()) >>= fun else_ ->
-   word "end" >> word "if" >> semicolon >>
-   return @@ StIf(ss, else_))
-  (* TODO case_statement *)
-  (* TODO loop_statement *)
-  (* TODO block_statement *)
-  (* TODO accept_statement *)
-  (* TODO select_statement*)
-and statement () =
-  many label >>= fun labels ->
-  (simple_statement <|> compound_statement()) >>= fun st ->
-  return @@ (labels, st)
-and sequence_of_statements () =
-  many1 (statement())
-
-(** 6. Subprograms **)
-
-(**======from 3. **)
-let default_expression = expression()
-let access_definition = word "access" >> subtype_mark()
-let defining_identifier_list = comsep1 defining_identifier
-(**======from 3. **)
+(** {3:bb6 BB 6. Subprograms} *)
 
 (**======from 10 **)
 let parent_unit_name =
@@ -488,47 +477,14 @@ let subprogram_specification =
     word "return" >> subtype_mark() >>= fun ret ->
     return @@ SpecFunc(def,formal,ret))
 
-
-(**========from 3**)
-let basic_declarative_item : unit parser = todo "basic_declarative_item"
-let body = todo "body"
-let declarative_part =
-  many (basic_declarative_item <|> body)
-(**========from 3**)
-
-(**========from 11**)
-let exception_handler : unit parser = todo "exception_handler"
-let handled_sequence_of_statements =
-  sequence_of_statements() >>= fun stats ->
-  opt (word "exception" >> many1 exception_handler) >>= fun exc ->
-  return @@ HandledStatements(stats, exc)
-(**========from 11**)
-
 let designator =
   opt (parent_unit_name << token_char '.') >*<
   (identifier <|> operator_symbol)
 
-let subprogram_body =
-  subprogram_specification >>= fun spec ->
-  word "is" >>
-  declarative_part >>= fun decls ->
-  word "begin" >>
-  handled_sequence_of_statements >>= fun stats ->
-  word "end" >>
-  opt designator >>= fun design ->
-  token_char ';' >>
-  return {
-    spec = spec;
-    declarative = decls;
-    statements = stats;
-    designator = design;
-  }
+(** {3:bb7 BB 7. Packages} *)
 
-(** 7. Packages **)
+(** {3:bb8 BB 8.} *)
 
-let package_body = todo "package_body"
-
-(** 8. **)
 let package_name =
   name() >>= fun n -> sguard (fun ctx -> C.is_package ctx n) >>
   return @@ PackageName n
@@ -540,9 +496,10 @@ let use_clause =
     <|> (word "type" >> comsep1 (subtype_mark ()) >>= fun ss -> return @@ UCType ss)
   end << token_char ';'
   
+(** {3:bb9 BB 9.} *)
 
+(** {3:bb10 BB 10. Program Structure and Compilation Issues} *)
 
-(** 10. Program Structure and Compilation Issues **)
 let with_clause =
   let library_unit_name = name() >>= fun n ->
     sguard (fun ctx -> C.is_libraryunit ctx n) >>
@@ -560,6 +517,69 @@ let context_clause =
 let library_unit_declaration : unit parser = todo "library_unit_declaration"
 
 let subunit = error "subunit"
+
+
+(** {2:c C} *)
+(** {2:d D} *)
+
+(** {3:d5 D 5.} *)
+
+let rec compound_statement () =
+  (* if_statememtn *)
+  (word "if" >>
+   sep1 (word "elsif") begin
+     condition >>= fun cond -> word "then" >>
+     sequence_of_statements() >>= fun st ->
+     return (cond, st)
+   end >>= fun ss ->
+   opt (word "else" >> sequence_of_statements()) >>= fun else_ ->
+   word "end" >> word "if" >> semicolon >>
+   return @@ StIf(ss, else_))
+  (* TODO case_statement *)
+  (* TODO loop_statement *)
+  (* TODO block_statement *)
+  (* TODO accept_statement *)
+  (* TODO select_statement*)
+and statement () =
+  many label >>= fun labels ->
+  (simple_statement <|> compound_statement()) >>= fun st ->
+  return @@ (labels, st)
+and sequence_of_statements () =
+  many1 (statement())
+
+(** {3:d6 D 6.} *)
+
+(**========from 11**)
+let exception_handler : unit parser = todo "exception_handler"
+let handled_sequence_of_statements =
+  sequence_of_statements() >>= fun stats ->
+  opt (word "exception" >> many1 exception_handler) >>= fun exc ->
+  return @@ HandledStatements(stats, exc)
+(**========from 11**)
+
+let subprogram_body =
+  subprogram_specification >>= fun spec ->
+  word "is" >>
+  declarative_part >>= fun decls ->
+  word "begin" >>
+  handled_sequence_of_statements >>= fun stats ->
+  word "end" >>
+  opt designator >>= fun design ->
+  token_char ';' >>
+  return {
+    spec = spec;
+    declarative = decls;
+    statements = stats;
+    designator = design;
+  }
+
+(** {3:d7 D 7.} *)
+
+let package_body = todo "package_body"
+
+(** {2:dd DD} *)
+
+(** {3:dd10 DD 10. Program Structure and Compilation Issues} *)
 
 let compilation =
   let compilation_unit =
@@ -583,6 +603,9 @@ let compilation =
     (library_item <|> subunit)
   in
   many1 compilation_unit
+
+
+(** {2:run running} *)
 
 let init_context = ()
 let run_ch ch =
