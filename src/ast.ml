@@ -225,6 +225,7 @@ type generic_inst =
 (*TODO*)
   | GInstPackage of dfp_unit_name * package_name * gen_assoc list option
   | GInstProc of dfp_unit_name * procedure_name * gen_assoc list option
+  | GInstFunc of dfp_unit_name * function_name * gen_assoc list option
 
 (** 13.Representation Clauses and Implementation-Dependent Features *)
 

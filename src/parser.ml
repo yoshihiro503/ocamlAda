@@ -549,7 +549,10 @@ let generic_instantiation =
     word "is">> word "new" >> procedure_name >>= fun pname ->
     opt generic_actual_part >>= fun act -> semicolon >>
     return @@ GInstProc(name,pname,act))
-(*  <|> TODO*)
+  <|> (word "function" >> defining_program_unit_name >>= fun name ->
+    word "is">> word "new" >> function_name >>= fun fname ->
+    opt generic_actual_part >>= fun act -> semicolon >>
+    return @@ GInstFunc(name,fname,act))
 
 (** {3:bb13 BB 13.Representation Clauses and Implementation-Dependent Features} *)
 
