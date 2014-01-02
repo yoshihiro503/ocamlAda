@@ -122,8 +122,11 @@ type discrim_spec =
   | DSpecSubtype of identifier list * subtype_mark * expression option
   | DSpecAccess of identifier list * access_def * expression option
 
+type enum_lit_spec =
+  | ELIdent of identifier
+  | ELChar of char
 type type_def =
-  | TDefEnum(*TODO*)
+  | TDefEnum of enum_lit_spec list
   (*TODO*)
 
 type full_type_decl =

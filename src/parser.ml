@@ -404,7 +404,17 @@ let known_discriminant_part =
 
 let type_declaration =
   let full_type_declaration =
-    let type_definition = todo "type_def"
+    let type_definition =
+      let enumeration_type_definition =
+        let enumeration_literal_specification =
+          (defining_identifier >>=- fun id -> ELIdent id)
+          <|> (character_literal >>=- fun c -> ELChar c)
+        in
+        popen>> comsep1 enumeration_literal_specification <<pclose >>= fun es ->
+        return @@ TDefEnum es
+      in
+      enumeration_type_definition
+      (*TODO*)
     in
     (defining_identifier >>= fun id -> opt known_discriminant_part >>= fun d ->
      word "is">> type_definition >>= fun tdef -> semicolon>>
