@@ -532,14 +532,27 @@ let representation_clause =
   let for_ = word "for" in
   let first_subtype_local_name = direct_name in
   let enumeration_aggregate = array_aggregate() in
+  let mod_clause = word"at" >> word"mod" >> static_expression() << semicolon in
+  let static_simple_expression = simple_expression() in
+  let first_bit = static_simple_expression in
+  let last_bit  = static_simple_expression in
+  let component_clause =
+    local_name >>= fun lname -> word"at">> static_expression() >>= fun e ->
+    word "range">> (first_bit <<symbol".." >*< last_bit) >>= fun (fst,lst) ->
+    semicolon >> return @@ (lname,e,fst,lst)
+  in
   (* at_clause *)
   (for_ >> direct_name >*< (word"use">>word"at">> expression() <<semicolon) >>=
    fun (n,e) -> return @@ ReprAt(n,e))
-  (*TODO  record_representation_clause *)
+  (* record_representation_clause *)
+  <|> (for_ >> first_subtype_local_name << word"use" >>= fun n ->
+       word "record" >> opt mod_clause >>= fun m ->
+       many component_clause >>= fun cs ->
+       word "end" >> word"record" >> return @@ ReprRecord(n,m,cs))
   (* enumeration_representation_clause *)
   <|> (for_ >> first_subtype_local_name << word"use" >*< enumeration_aggregate
        << semicolon >>= fun (n,aggr) -> return @@ ReprEnum(n,aggr))
-  (* attribute_definition_clause *)
+  (* attribute_definition_clause *) (*nameに'も取ってかれてうまくいかないかも*)
   <|> (for_ >> local_name >>= fun lname ->
    token_char '\'' >> attribute_designator() >>= fun attr ->
    word "use" >> expression() >>= fun e ->

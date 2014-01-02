@@ -213,9 +213,11 @@ type local_name =
 
 type first_subtype_local_name = direct_name
 type enum_aggregate = array_aggregate
-
+type mod_clause = expression
+type bit = simple_expr
+type comp_clause = local_name * expression * bit * bit
 type repr_clause =
   | ReprAttr of local_name * attribute * expression
   | ReprAt of direct_name * expression
   | ReprEnum of first_subtype_local_name * enum_aggregate
-  | ReprRecord
+  | ReprRecord of first_subtype_local_name * mod_clause option * comp_clause list
