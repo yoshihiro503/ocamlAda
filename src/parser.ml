@@ -432,6 +432,18 @@ let record_definition =
   (word "null">> word "record" >>- NullRecord)
   (*TODO*)
 
+let access_type_definition =
+  (* access_to_object_definition *)
+  (word "access" >> opt (word "all" <|> word "constant") >>= fun ac ->
+  subtype_indication() >>=- fun ind -> AccTyObj(ac, ind))
+  (* access_to_subprogram_definition *)
+  <|> (word "access">> opt (word"protected") >>= fun prot ->
+    word "procedure" >> parameter_profile >>= fun prof ->
+    return @@ AccTySubprogProc(is_some prot, prof))
+  <|> (word "access">> opt (word"protected") >>= fun prot ->
+    word "function" >> parameter_and_result_profile >>= fun p ->
+    return @@ AccTySubprogFunc(is_some prot, p))
+
 let type_declaration =
   let full_type_declaration =
     let type_definition =
@@ -468,23 +480,12 @@ let type_declaration =
         opt (word"limited") >>= fun lim -> record_definition >>= fun r ->
         return @@ TDefRecord(Option.map is_some abs_tag, is_some lim, r)
       in
-      let access_type_definition =
-        (* access_to_object_definition *)
-        (word "access" >> opt (word "all" <|> word "constant") >>= fun ac ->
-         subtype_indication() >>=- fun ind -> TDefAcc_Obj(ac, ind))
-        <|> (word "access">> opt (word"protected") >>= fun prot ->
-          word "procedure" >> parameter_profile >>= fun prof ->
-          return @@ TDefAcc_SubprogProc(is_some prot, prof))
-        <|> (word "access">> opt (word"protected") >>= fun prot ->
-          word "function" >> parameter_and_result_profile >>= fun p ->
-          return @@ TDefAcc_SubprogFunc(is_some prot, p))
-      in
       enumeration_type_definition
       <|> integer_type_definition
       <|> real_type_definition
       <|> (array_type_definition >>=- fun a -> TDefArray a)
       <|> record_type_definition
-      <|> access_type_definition
+      <|> (access_type_definition >>=- fun a -> TDefAcc a)
       (*TODO*)
     in
     (word"type">> defining_identifier >>= fun id ->
