@@ -129,6 +129,7 @@ and statement_elem =
   | StNull
   | StAssign of var_name * expression
   | StProcCall of pname * param_assoc list option
+  | StReturn of expression option
 (*TODO compound_statement *)
   | StIf of (condition * seq_statements) list * seq_statements option
 (** 6. Subprograms **)
@@ -202,3 +203,13 @@ type library_item =
   | LibRenameDecl of bool * unit(*TODO*)
 
 (** 11. Exceptions **)
+
+(** 13.Representation Clauses and Implementation-Dependent Features *)
+
+type local_name =
+  | LocalDirect of direct_name
+  | LocalAttr of direct_name * attribute
+  | LocalLib of library_unit_name
+
+type repr_clause =
+  | ReprAttr of local_name * attribute * expression

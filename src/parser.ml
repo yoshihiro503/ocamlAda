@@ -419,7 +419,9 @@ let simple_statement : statement_elem parser =
   <|> (pname >>= fun n -> print_endline"proc_call_statement";
    opt (actual_parameter_part()) << token_char ';' >>= fun ps ->
    return @@ StProcCall(n, ps))
-  (* TODO return *)
+  (* return_statement *)
+  <|> (word "return" >> opt (expression()) >>= fun e -> semicolon >>
+       return @@ StReturn e)
   (* TODO entry *)
   (* TODO requeue *)
   (* TODO delay *)
@@ -500,11 +502,11 @@ let use_clause =
 
 (** {3:bb10 BB 10. Program Structure and Compilation Issues} *)
 
+let library_unit_name = name() >>= fun n ->
+  sguard (fun ctx -> C.is_libraryunit ctx n) >>
+  return @@ LibraryUnit n
+
 let with_clause =
-  let library_unit_name = name() >>= fun n ->
-    sguard (fun ctx -> C.is_libraryunit ctx n) >>
-    return @@ LibraryUnit n
-  in
   word "with" >>
   comsep1 library_unit_name ^? "libsep" >>= fun lu_names ->
   token_char ';' >>
@@ -516,8 +518,26 @@ let context_clause =
 
 let library_unit_declaration : unit parser = todo "library_unit_declaration"
 
-let subunit = error "subunit"
+let subunit = todo "subunit"
 
+(** {3:bb13 BB 13.Representation Clauses and Implementation-Dependent Features} *)
+
+let local_name =
+  ((direct_name << token_char '\'' >*< attribute_designator()) >>= fun (d,a) ->
+   return @@ LocalAttr(d,a))
+  <|> (direct_name >>= fun d -> return @@ LocalDirect d)
+  <|> (library_unit_name >>= fun n -> return @@ LocalLib n)
+
+let representation_clause =
+  let for_ = word "for" in
+  (* attribute_definition_clause *)
+  (for_ >> local_name >>= fun lname ->
+   token_char '\'' >> attribute_designator() >>= fun attr ->
+   word "use" >> expression() >>= fun e ->
+   return @@ ReprAttr(lname,attr,e))
+  (*TODO enumeration_representation_clause *)
+  (*TODO  record_representation_clause *)
+  (*TODO  at_clause *)
 
 (** {2:c C} *)
 (** {2:d D} *)
