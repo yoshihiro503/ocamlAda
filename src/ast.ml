@@ -272,11 +272,14 @@ type repr_clause =
   | ReprRecord of first_subtype_local_name * mod_clause option * comp_clause list
 
 (*==================3*)
-type basic_decl = unit(*TODO*)
+type basic_decl =
+  | BDeclType of type_decl
+  | BDeclNumb of identifier list * expression
+  (*TODO*)
 type basic_decl_item =
-  | BDeclBasic of basic_decl
-  | BDeclRepr of repr_clause
-  | BDeclUse of use_clause
+  | BDItemBasic of basic_decl
+  | BDItemRepr of repr_clause
+  | BDItemUse of use_clause
 (*==================3*)
 
 (** {2:c C山} *)

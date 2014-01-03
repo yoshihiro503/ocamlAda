@@ -726,12 +726,25 @@ let representation_clause =
 
 (** {3:c3 C 3. } *)
 
-let rec basic_declaration () = todo "basic_declaration"
+let rec basic_declaration () =
+  (type_declaration >>=- fun td -> BDeclType td)
+  (*TODO subtype_declaration *)
+  (*TODO object_declaration *)
+  (* number_declaration *)
+  <|> (defining_identifier_list >>= fun ids ->
+    token_char ':'>> word"constant" >> symbol ":=">>
+    expression() >>= fun e -> semicolon>> return @@ BDeclNumb (ids, e))
+  (*TODO subprogram_declaration *)
+  (*TODO abstract_subprogram_declaration *)
+  (*TODO package_declaration *)
+  (*TODO generic_declaration *)
+  (*TODO generic_instantiation *)
+  
 
 and basic_declarative_item () =
-  (basic_declaration() >>=- fun b -> BDeclBasic b)
-  <|> (representation_clause >>=- fun r -> BDeclRepr r)
-  <|> (use_clause >>=- fun u -> BDeclUse u)
+  (basic_declaration() >>=- fun b -> BDItemBasic b)
+  <|> (representation_clause >>=- fun r -> BDItemRepr r)
+  <|> (use_clause >>=- fun u -> BDItemUse u)
 
 (** {3:c7 C 7. } *)
 
