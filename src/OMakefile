@@ -1,4 +1,4 @@
-.PHONY: all install clean lib top
+.PHONY: all install clean lib top doc
 
 ################################################
 # Build an OCaml library
@@ -27,6 +27,9 @@ $(LIB): $(OCamlLibrary $(LIB), $(LIBFILES))
 
 top: $(LIB)
        rlwrap ocaml unix.cma lib.cma
+
+doc: $(LIB)
+	ocamldoc -html -d html *.ml *.mli
 
 clean:
        rm -f *~ *.opt *.run *.cm[ioax] *.cmxa *.o *.annot $(LIB)
