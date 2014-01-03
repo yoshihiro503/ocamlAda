@@ -11,8 +11,6 @@ type numeric =
   | NumDecimal of intpart * fracpart option * exponent option
   | NumBased of base * intpart * fracpart option * exponent option
 
-type declarative_elem = unit(*TODO*)
-
 (** 3., 4. *)
 
 type selector_name = string
@@ -173,26 +171,16 @@ type type_decl =
   | TDeclPrivExt(*TODO*)
 
 (** 5. Statements **)
+
 type condition = expression
 
 type statement_identifier = direct_name
 type label = Label of statement_identifier
 type variable_name = VarName of name
 
-type seq_statements = (label list * statement_elem) list
-and statement_elem =
-(*TODO simple_statement *)
-  | StNull
-  | StAssign of variable_name * expression
-  | StProcCall of pname * param_assoc list option
-  | StReturn of expression option
-(*TODO compound_statement *)
-  | StIf of (condition * seq_statements) list * seq_statements option
 (** 6. Subprograms **)
-and procedure_name = ProcName of name
-and pname =
-  | PNPrefix of prefix
-  | PNProcName of procedure_name
+
+type procedure_name = ProcName of name
 
 type mode =
   | NoMode | In | Out | InOut
@@ -202,9 +190,9 @@ type param_type_spec =
 type param_spec = identifier list * param_type_spec * expression option
 type formal = param_spec list
 
-(*==================10*)
+(*=======================10*)
 type parent_unit_name = ParentUnit of name
-(*==================10*)
+(*=======================10*)
 
 type designator = parent_unit_name option * ident_or_opsymb
 
@@ -218,18 +206,6 @@ type subprogram_spec =
   | SpecProc of def_program_unit_name * formal option
   | SpecFunc of defining_designator * formal option * subtype_mark
 
-(*==================11*)
-type exc_handler = unit(*TODO*)
-type handled_statements =
-  | HandledStatements of seq_statements * exc_handler list option
-(*==================11*)
-
-type subprogram_body = {
-    spec : subprogram_spec;
-    declarative : declarative_elem list;
-    statements : handled_statements;
-    designator : designator option;
-  }
 
 (** 7. Packages **)
 type package_body = unit(*TODO*)
@@ -254,12 +230,6 @@ type with_clause = library_unit_name list
 type context_clause =
   | WithClause of with_clause
   | UseClause of use_clause
-
-type library_item =
-  | LibDecl of bool * unit(*TODO*)
-  | LibBody_Subprog of subprogram_body
-  | LibBody_Package of package_body
-  | LibRenameDecl of bool * unit(*TODO*)
 
 (** 11. Exceptions **)
 
@@ -300,3 +270,54 @@ type repr_clause =
   | ReprAt of direct_name * expression
   | ReprEnum of first_subtype_local_name * enum_aggregate
   | ReprRecord of first_subtype_local_name * mod_clause option * comp_clause list
+
+(*==================3*)
+type basic_decl = unit(*TODO*)
+type basic_decl_item =
+  | BDeclBasic of basic_decl
+  | BDeclRepr of repr_clause
+  | BDeclUse of use_clause
+(*==================3*)
+
+(** {2:c C山} *)
+
+(** {2:d D山} *)
+
+(** 5. Statements **)
+
+type seq_statements = (label list * statement_elem) list
+and statement_elem =
+(*TODO simple_statement *)
+  | StNull
+  | StAssign of variable_name * expression
+  | StProcCall of pname * param_assoc list option
+  | StReturn of expression option
+(*TODO compound_statement *)
+  | StIf of (condition * seq_statements) list * seq_statements option
+(** 6. Subprograms **)
+and pname =
+  | PNPrefix of prefix
+  | PNProcName of procedure_name
+
+(*==================11*)
+type exc_handler = unit(*TODO*)
+type handled_statements =
+  | HandledStatements of seq_statements * exc_handler list option
+(*==================11*)
+
+(*==================6*)
+type subprogram_body = {
+    spec : subprogram_spec;
+    declarative : basic_decl_item list;
+    statements : handled_statements;
+    designator : designator option;
+  }
+(*==================6*)
+
+(** 10. Program Structure and Compilation Issues **)
+type library_item =
+  | LibDecl of bool * unit(*TODO*)
+  | LibBody_Subprog of subprogram_body
+  | LibBody_Package of package_body
+  | LibRenameDecl of bool * unit(*TODO*)
+

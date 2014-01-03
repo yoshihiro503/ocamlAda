@@ -70,7 +70,7 @@ let identifier =
   end ^? "identifire"
 
 let word w =
-  identifier >>= fun s -> guard (s = w) >> return s
+  (identifier >>= fun s -> guard (s = w) >> return s) ^? (!%"word:%s" w)
 
 let graphic_character =
   identifier_letter <|> digit
@@ -728,7 +728,10 @@ let representation_clause =
 
 let rec basic_declaration () = todo "basic_declaration"
 
-and basic_declarative_item () = todo "basic_declarative_item"
+and basic_declarative_item () =
+  (basic_declaration() >>=- fun b -> BDeclBasic b)
+  <|> (representation_clause >>=- fun r -> BDeclRepr r)
+  <|> (use_clause >>=- fun u -> BDeclUse u)
 
 (** {3:c7 C 7. } *)
 
@@ -749,10 +752,9 @@ let library_unit_declaration : unit parser = todo "library_unit_declaration"
 
 (** {3:d3 D 3.} *)
 
-let basic_declarative_item : unit parser = todo "basic_declarative_item"
 let body = todo "body"
-let declarative_part =
-  many (basic_declarative_item <|> body)
+let declarative_part () =
+  many1 (basic_declarative_item() <|> body) ^? "declarative_part"
 
 (** {3:d5 D 5.} *)
 
@@ -784,15 +786,17 @@ and sequence_of_statements () =
 (**========from 11**)
 let exception_handler : unit parser = todo "exception_handler"
 let handled_sequence_of_statements =
-  sequence_of_statements() >>= fun stats ->
-  opt (word "exception" >> many1 exception_handler) >>= fun exc ->
-  return @@ HandledStatements(stats, exc)
+  begin
+    sequence_of_statements() >>= fun stats ->
+    opt (word "exception" >> many1 exception_handler) >>= fun exc ->
+    return @@ HandledStatements(stats, exc)
+  end ^? "handled_sequence_of_statements"
 (**========from 11**)
 
 let subprogram_body =
   subprogram_specification >>= fun spec ->
   word "is" >>
-  declarative_part >>= fun decls ->
+  declarative_part() >>= fun decls ->
   word "begin" >>
   handled_sequence_of_statements >>= fun stats ->
   word "end" >>
