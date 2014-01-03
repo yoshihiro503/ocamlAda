@@ -171,7 +171,7 @@ and digits_constraint () =
   word"digits">> expression() >*< opt(range_constraint()) >>= fun(e,r)->
   return @@ CoDigits(e, r)
 
-and index_constraint() =
+and index_constraint () =
   popen >> comsep1 (discrete_range()) << pclose >>= fun rs ->
   return @@ CoIndex rs
 
@@ -412,14 +412,14 @@ let component_definition =
 
 let array_type_definition =
   let index_subtype_definition =
-    subtype_mark() >*< range() << symbol "<>"
+    subtype_mark() << word "range" << symbol "<>"
   in
   (* constrained_array_definition *)
   (word"array">> popen>> comsep1 discrete_subtype_definition >>= fun ds ->
    pclose>> word"of">> component_definition >>= fun comp ->
    return @@ ArrTypeConst(ds, comp))
   (* unconstrained_array_definition *)
-  <|> (word"array">> popen>> comsep1 index_subtype_definition>>= fun is ->
+  <|> (word"array">> popen>> comsep1 index_subtype_definition^?"indsubdef" >>= fun is ->
     pclose>> word"of">> component_definition >>= fun comp ->
     return @@ ArrTypeUncon(is, comp))
 

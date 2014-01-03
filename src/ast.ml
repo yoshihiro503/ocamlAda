@@ -128,7 +128,7 @@ type comp_def = bool * subtype_ind
 
 type array_type_def =
   | ArrTypeConst of discrete_subtype_def list * comp_def
-  | ArrTypeUncon of (subtype_mark * range) list * comp_def
+  | ArrTypeUncon of subtype_mark list * comp_def
 
 type record_def = (*TODO*)
   | NullRecord

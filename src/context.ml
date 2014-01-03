@@ -43,7 +43,8 @@ let init ctx =
     A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Numerics");
   ] |> ignore;
   List.map (fun n -> set Submark n ctx) [
-    A.NDirect "Integer"
+    A.NDirect "Integer";
+    A.NDirect "Positive";
   ] |> ignore;
   List.map (fun n -> set ProcName n ctx) [
     A.NDirect "Put_Line"
