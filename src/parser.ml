@@ -33,6 +33,7 @@ let line_comment =
   char '\n' >> return ()
 
 let token p =
+  many (line_comment <|> white1) >>
   p >>= fun x ->
   many (line_comment <|> white1) >>
   return x
@@ -147,7 +148,7 @@ let rec subtype_indication () =
   subtype_mark() >>= fun n -> opt (constraint_()) >>= fun c -> return(n,c)
 
 and subtype_mark () =
-  name() >>= fun n -> sguard (fun ctx -> C.is_submark ctx n) >>
+  name() >>= fun n -> sguard (C.check C.Submark n) >>
   return @@ SubtypeMark n
 
 and constraint_ () =
@@ -225,11 +226,11 @@ and name_ () : name parser =
     return @@ NFunCall (fname, Some params)
   in
   let next ctx (prename : name) =
-    if C.is_function ctx prename then
+    if C.check C.FuncName prename ctx then
       fname_next (FunName prename)
-    else if C.is_submark ctx prename then
+    else if C.check C.Submark prename ctx then
       submark_next (SubtypeMark prename)
-    else if C.is_prefix ctx prename then
+    else if C.check C.Prefix prename ctx then
       prefix_next (Prefix prename)
     else
       name_next prename
@@ -241,8 +242,7 @@ and name_ () : name parser =
   ((direct_name |> with_state) >>= fun (d,ctx) -> name_nexts ctx (NDirect d)) <|> ((character_literal |>with_state) >>= fun (c,ctx) -> name_nexts ctx (NChar c))
     ^? "name"
 and prefix () =
-  name() >>= fun n ->
-  sguard (fun ctx -> C.is_prefix ctx n) >>
+  name() >>= fun n -> sguard (C.check C.Prefix n) >>
   return @@ Prefix n
 
 and attribute_designator () : attribute parser =
@@ -524,12 +524,12 @@ let type_declaration =
 
 (** =============6*)
 let procedure_name =
-  name() >>= fun n -> sguard (fun ctx -> C.is_procedure ctx n) >>
+  name() >>= fun n -> sguard (C.check C.ProcName n) >>
   return @@ ProcName n  
 (** =============6*)
 
 let variable_name =
-  name() >>= fun n -> sguard (fun ctx -> C.is_variable ctx n) >>
+  name() >>= fun n -> sguard (C.check C.Variable n) >>
   return @@ VarName n
   
 let simple_statement : statement_elem parser =
@@ -568,12 +568,12 @@ let label =
 (** {3:bb6 BB 6. Subprograms} *)
 
 let function_name =
-  name() >>= fun n -> sguard (fun ctx -> C.is_function ctx n) >>
+  name() >>= fun n -> sguard (C.check C.FuncName n) >>
   return @@ FunName n
 
 (**======from 10 **)
 let parent_unit_name =
-  name() >>= fun n -> sguard (fun ctx -> C.is_parent_unit ctx n) >>
+  name() >>= fun n -> sguard (C.check C.ParentUnit n) >>
   return @@ ParentUnit n
 (**======from 10 **)
 
@@ -621,7 +621,7 @@ let designator =
 (** {3:bb8 BB 8.} *)
 
 let package_name =
-  name() >>= fun n -> sguard (fun ctx -> C.is_package ctx n) >>
+  name() >>= fun n -> sguard (C.check C.Package n) >>
   return @@ PackageName n
 
 let use_clause =
@@ -634,24 +634,31 @@ let use_clause =
 (** {3:bb9 BB 9.} *)
 
 let entry_name =
-  name() >>= fun n -> sguard(fun ctx -> C.is_entry ctx n) >>
+  name() >>= fun n -> sguard (C.check C.EntryName n)>>
   return @@ EntryName n
 
 (** {3:bb10 BB 10. Program Structure and Compilation Issues} *)
 
-let library_unit_name = name() >>= fun n ->
-  sguard (fun ctx -> C.is_libraryunit ctx n) >>
+let library_unit_name = name() >>= fun n -> 
+  sguard (C.check C.LibraryUnit n) >>
   return @@ LibraryUnit n
 
 let with_clause =
   word "with" >>
-  comsep1 library_unit_name ^? "libsep" >>= fun lu_names ->
+  comsep1 library_unit_name >>= fun lu_names ->
   token_char ';' >>
   return (lu_names)
 
 let context_clause =
-  many ((with_clause |> map (fun wc -> WithClause wc))
-        <|> (use_clause |> map (fun uc -> UseClause uc)))
+  let add_packages libnames ctx0 =
+    List.map (fun (LibraryUnit n) -> n) libnames
+    |> List.fold_left (fun ctx n -> C.set C.Package n ctx) ctx0
+  in
+  many begin
+    (with_clause >>= fun wc -> update_state (add_packages wc) >>
+     return @@ WithClause wc)
+    <|> (use_clause |> map (fun uc -> UseClause uc))
+  end
 
 (** {3:bb12 BB 12.} *)
 
@@ -858,7 +865,6 @@ let compilation =
 
 (** {2:run running} *)
 
-let init_context = ()
 let run_ch ch =
-  ParserMonad.run_ch init_context (compilation) ch
+  ParserMonad.run_ch (Context.create()) (compilation) ch
 

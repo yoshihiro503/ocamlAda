@@ -24,7 +24,7 @@ val map : ('a -> 'b) -> ('res,'a) t -> ('res, 'b) t
 val guard : bool -> ('res, unit) t
 val ( >*< ) : ('res,'a) t -> ('res, 'b) t -> ('res, 'a * 'b) t
 
-val update_state : ('res -> 'res) -> ('res,'a) t -> ('res, 'a) t
+val update_state : ('res -> 'res) -> ('res, unit) t
 val with_state : ('res, 'a) t -> ('res, 'a * 'res) t
 
 val char1 : ('res, char) t

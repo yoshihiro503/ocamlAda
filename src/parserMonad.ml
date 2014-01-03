@@ -161,11 +161,10 @@ let run p state ts =
   | Inr (state, msg) -> 
       raise (ParseError (showerr state msg))
 
-let update_state (f: 'res -> 'res) : ('res, 'a) t -> ('res, 'a) t =
-  fun p state ts ->
-  match p state ts with
-  | Inl (x, (pos,res), ts') -> Inl (x, (pos, f res), ts')
-  | Inr (state, msg) -> Inr (state, msg)
+let update_state (f: 'res -> 'res) : ('res, unit) t =
+  fun state ts ->
+  let (pos, res) = state in
+  Inl ((), (pos, f res), ts)
 
 let with_state : ('res, 'a) t -> ('res, 'a * 'res) t =
   fun p state ts ->

@@ -1,25 +1,67 @@
-open Ast
+open Util
 
-type t = unit
+module A = Ast
 
-let is_variable ctx name =
-  List.mem name []
+type kind =
+  | Prefix
+  | Variable
+  | Submark
+  | ProcName
+  | FuncName
+  | Package
+  | LibraryUnit
+  | ParentUnit
+  | EntryName
+let skind = function
+  | Prefix -> "Prefix"
+  | Variable -> "Variable"
+  | Submark -> "Submark"
+  | ProcName -> "ProcName"
+  | FuncName -> "FuncName"
+  | Package -> "Package"
+  | LibraryUnit -> "LibraryUnit"
+  | ParentUnit -> "ParentUnit"
+  | EntryName -> "EntryName"
 
-let is_prefix ctx name =
-  List.mem name [NDirect "Ada"]
-let is_submark ctx name =
-  List.mem name [NDirect "Integer"]
-let is_function ctx name =
-  false
-let is_procedure ctx name =
-  List.mem name [NDirect "Put_Line"]
-let is_package ctx name =
-  List.mem name [NSelectedComp(Prefix(NDirect "Ada"), "Text_Io")]
-let is_libraryunit ctx name =
-  List.mem name [NSelectedComp(Prefix(NDirect "Ada"), "Text_Io")]
+type t = (A.name, kind) Hashtbl.t
 
-let is_parent_unit ctx name =
-  List.mem name []
+let set : kind -> A.name -> t -> t = fun kind name ctx ->
+  Hashtbl.add ctx name kind; ctx
 
-let is_entry ctx name =
-  List.mem name []
+let check_ : kind -> A.name -> t -> bool = fun kind name ctx ->
+  try Hashtbl.find ctx name = kind with
+  | Not_found -> false
+let check k n c =
+  let b = check_ k n c in
+  print_endline (!%"check %s: %s: %b" (skind k) (A.sname n) b);
+  b
+
+
+let init ctx =
+  List.map (fun n -> set Prefix n ctx) [
+    A.NDirect "Ada";
+    A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Numerics");
+  ] |> ignore;
+  List.map (fun n -> set Submark n ctx) [
+    A.NDirect "Integer"
+  ] |> ignore;
+  List.map (fun n -> set ProcName n ctx) [
+    A.NDirect "Put_Line"
+  ] |> ignore;
+  List.map (fun n -> set LibraryUnit n ctx) [
+    A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Text_Io");
+    A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Command_Line");
+    A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Integer_Text_Io");
+    A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Calendar");
+    A.NSelectedComp(A.Prefix(A.NSelectedComp(A.Prefix(A.NDirect"Ada"),"Numerics")),
+                                             
+                    "Generic_Elementary_Functions");
+  ] |> ignore;
+  ctx
+
+let init_size = 100
+let create () : t =
+  let ctx = Hashtbl.create init_size in
+  init ctx
+  
+
