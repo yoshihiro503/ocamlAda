@@ -12,6 +12,8 @@ let sguard f =
   (return () |> with_state) >>= fun ((), ctx) -> guard (f ctx)
 let (>>=-) p f = p >>= fun x -> return (f x)
 let (>>-) p x = p >> return x
+let many2 p = p >*< many1 p >>=- fun (x,xs) -> x::xs
+let many3 p = p >*< many2 p >>=- fun (x,xs) -> x::xs
 
 type 'a parser = (Context.t, 'a) ParserMonad.t
 let sep = ()
@@ -613,6 +615,8 @@ let subprogram_specification =
     word "return" >> subtype_mark() >>= fun ret ->
     return @@ SpecFunc(def,formal,ret))
 
+let subprogram_declaration = subprogram_specification << semicolon
+
 let designator =
   opt (parent_unit_name << token_char '.') >*<
   (identifier <|> operator_symbol)
@@ -735,7 +739,11 @@ let representation_clause =
 (** {3:c3 C 3. } *)
 
 let rec basic_declaration () =
-  (type_declaration >>=- fun td -> BDeclType td)
+  let add_type type_decl ctx =
+    C.set C.Submark (NDirect (typename type_decl)) ctx
+  in
+  (type_declaration >>= fun td -> update_state (add_type td)>>-
+    BDeclType td)
   (* subtype_declaration *)
   <|> (word "subtype" >> defining_identifier >>= fun id -> word"is">>
     subtype_indication() >>= fun ind -> semicolon>>- BDeclSubtype(id, ind))
@@ -744,8 +752,11 @@ let rec basic_declaration () =
   <|> (defining_identifier_list >>= fun ids ->
     token_char ':'>> word"constant" >> symbol ":=">>
     expression() >>= fun e -> semicolon>> return @@ BDeclNumb (ids, e))
-  (*TODO subprogram_declaration *)
-  (*TODO abstract_subprogram_declaration *)
+  (* subprogram_declaration *)
+  <|> (subprogram_declaration >>=- fun sp -> BDeclSubprog sp)
+  (* abstract_subprogram_declaration *)
+  <|> (subprogram_specification << word"is"<<word"abstract"<<semicolon
+     >>=- fun sp -> BDeclAbsSubprog sp)
   (*TODO package_declaration *)
   (*TODO generic_declaration *)
   (*TODO generic_instantiation *)
@@ -775,13 +786,25 @@ let library_unit_declaration : unit parser = todo "library_unit_declaration"
 
 (** {3:d3 D 3.} *)
 
-let body = todo "body"
-let declarative_part () =
-  many (basic_declarative_item() <|> body) ^? "declarative_part"
+let rec proper_body () =
+  (subprogram_body() >>=- fun sp -> ProperSubprog sp)
+  (*TODO package_body *)
+  (*TODO task_body *)
+  (*TODO protected_body *)
+
+and declarative_part () =
+  let body () =
+    (proper_body() >>=- fun b -> BodyProper b)
+    (*TODO body_stub*)
+  in
+  many begin
+    (basic_declarative_item() >>=- fun b -> DeclBasic b)
+    <|> (body() >>=- fun b -> DeclBody b)
+  end ^? "declarative_part"
 
 (** {3:d5 D 5.} *)
 
-let rec compound_statement () =
+and compound_statement () =
   (* if_statememtn *)
   (word "if" >>
    sep1 (word "elsif") begin
@@ -807,8 +830,8 @@ and sequence_of_statements () =
 (** {3:d6 D 6.} *)
 
 (**========from 11**)
-let exception_handler : unit parser = todo "exception_handler"
-let handled_sequence_of_statements =
+and exception_handler : unit parser = todo "exception_handler"
+and handled_sequence_of_statements () =
   begin
     sequence_of_statements() >>= fun stats ->
     opt (word "exception" >> many1 exception_handler) >>= fun exc ->
@@ -816,12 +839,12 @@ let handled_sequence_of_statements =
   end ^? "handled_sequence_of_statements"
 (**========from 11**)
 
-let subprogram_body =
+and subprogram_body () =
   subprogram_specification >>= fun spec ->
   word "is" >>
   declarative_part() >>= fun decls ->
   word "begin" >>
-  handled_sequence_of_statements >>= fun stats ->
+  handled_sequence_of_statements() >>= fun stats ->
   word "end" >>
   opt designator >>= fun design ->
   token_char ';' >>
@@ -847,7 +870,7 @@ let compilation =
     let library_item =
       let library_unit_declaration = todo "library_unit_declaration" in
       let library_unit_body =
-        (subprogram_body >>= fun subp -> return @@ LibBody_Subprog subp)
+        (subprogram_body() >>= fun subp -> return @@ LibBody_Subprog subp)
         <|> (package_body >>= fun pack -> return @@ LibBody_Package pack)
       in
       let library_unit_renaming_declaration =

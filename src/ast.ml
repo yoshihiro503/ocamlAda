@@ -169,6 +169,13 @@ type type_decl =
   | TDeclIncomp(*TODO*)
   | TDeclPriv(*TODO*)
   | TDeclPrivExt(*TODO*)
+let typename = function
+  | TDeclFull (FTDeclType(id,_,_))
+  | TDeclFull (FTDeclTask(id,_,_))
+  | TDeclFull (FTDeclProtected(id,_,_)) -> id
+  | TDeclIncomp -> failwith("Ast.typename: Incomp")
+  | TDeclPriv -> failwith("Ast.typename: Priv")
+  | TDeclPrivExt -> failwith("Ast.typename: PrivExt")
 
 (** 5. Statements **)
 
@@ -275,6 +282,8 @@ type repr_clause =
 type basic_decl =
   | BDeclType of type_decl
   | BDeclSubtype of identifier * subtype_ind
+  | BDeclSubprog of subprogram_spec
+  | BDeclAbsSubprog of subprogram_spec
   | BDeclNumb of identifier list * expression
   (*TODO*)
 type basic_decl_item =
@@ -287,9 +296,22 @@ type basic_decl_item =
 
 (** {2:d D山} *)
 
+(** 3. **)
+type proper_body =
+  | ProperSubprog of subprogram_body
+  | ProperPackage(*TODO*)
+  | ProperTask(*TODO*)
+  | ProperProtected(*TODO*)
+and body =
+  | BodyProper of proper_body
+  | BodyStub(*TODO*)
+and decl_part0 =
+  | DeclBasic of basic_decl_item
+  | DeclBody of body
+
 (** 5. Statements **)
 
-type seq_statements = (label list * statement_elem) list
+and seq_statements = (label list * statement_elem) list
 and statement_elem =
 (*TODO simple_statement *)
   | StNull
@@ -304,15 +326,15 @@ and pname =
   | PNProcName of procedure_name
 
 (*==================11*)
-type exc_handler = unit(*TODO*)
-type handled_statements =
+and exc_handler = unit(*TODO*)
+and handled_statements =
   | HandledStatements of seq_statements * exc_handler list option
 (*==================11*)
 
 (*==================6*)
-type subprogram_body = {
+and subprogram_body = {
     spec : subprogram_spec;
-    declarative : basic_decl_item list;
+    declarative : decl_part0 list;
     statements : handled_statements;
     designator : designator option;
   }
