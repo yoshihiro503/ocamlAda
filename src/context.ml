@@ -47,6 +47,7 @@ let init ctx =
   List.map (fun n -> set Submark n ctx) [
     A.NDirect "Boolean";
     A.NDirect "Integer";
+    A.NDirect "Float";
     A.NDirect "Positive";
   ] |> ignore;
   List.map (fun n -> set ProcName n ctx) [

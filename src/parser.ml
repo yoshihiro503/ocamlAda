@@ -73,7 +73,7 @@ let identifier =
   end ^? "identifire"
 
 let word w =
-  (identifier >>= fun s -> guard (s = w) >> return s) ^? (!%"word:%s" w)
+  (identifier >>= fun s -> guard (s = w) ^? (!%"expected '%s' but '%s'" w s) >> return s) 
 
 let graphic_character =
   identifier_letter <|> digit
@@ -760,7 +760,8 @@ let rec basic_declaration () =
   (* package_declaration *)
   <|> (package_declaration() >>=- fun pack -> BDeclPackage pack)
   (*TODO generic_declaration *)
-  (*TODO generic_instantiation *)
+  (* generic_instantiation *)
+  <|> (generic_instantiation >>=- fun inst -> BDeclGenInst inst)
   
 
 and basic_declarative_item () =

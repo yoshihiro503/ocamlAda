@@ -286,6 +286,7 @@ and basic_decl =
   | BDeclAbsSubprog of subprogram_spec
   | BDeclNumb of identifier list * expression
   | BDeclPackage of package_spec
+  | BDeclGenInst of generic_inst
   (*TODO*)
 and basic_decl_item =
   | BDItemBasic of basic_decl
