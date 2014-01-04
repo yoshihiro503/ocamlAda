@@ -287,6 +287,10 @@ and basic_decl =
   | BDeclNumb of identifier list * expression
   | BDeclPackage of package_spec
   | BDeclGenInst of generic_inst
+  | BDeclObj_1 of identifier list * bool * bool * subtype_ind * expression option
+  | BDeclObj_2 of identifier list * bool * bool * array_type_def * expression option
+  | BDeclObj_3 of identifier * task_def option
+  | BDeclObj_4 of identifier * protected_def
   (*TODO*)
 and basic_decl_item =
   | BDItemBasic of basic_decl

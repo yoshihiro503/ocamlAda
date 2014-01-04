@@ -47,6 +47,7 @@ let init ctx =
   List.map (fun n -> set Submark n ctx) [
     A.NDirect "Boolean";
     A.NDirect "Integer";
+    A.NDirect "Character";
     A.NDirect "Float";
     A.NDirect "Positive";
   ] |> ignore;
@@ -55,12 +56,15 @@ let init ctx =
   ] |> ignore;
   List.map (fun n -> set LibraryUnit n ctx) [
     A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Text_Io");
+    A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Text_Io");
     A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Command_Line");
     A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Integer_Text_Io");
     A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Calendar");
     A.NSelectedComp(A.Prefix(A.NSelectedComp(A.Prefix(A.NDirect"Ada"),"Numerics")),
                                              
                     "Generic_Elementary_Functions");
+    A.NDirect "Text_IO";
+    A.NSelectedComp(A.Prefix(A.NDirect "Gnat"), "Io");
   ] |> ignore;
   ctx
 

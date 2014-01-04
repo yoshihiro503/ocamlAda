@@ -14,6 +14,7 @@ let (>>=-) p f = p >>= fun x -> return (f x)
 let (>>-) p x = p >> return x
 let many2 p = p >*< many1 p >>=- fun (x,xs) -> x::xs
 let many3 p = p >*< many2 p >>=- fun (x,xs) -> x::xs
+let optb p = opt p |> map is_some
 
 type 'a parser = (Context.t, 'a) ParserMonad.t
 let sep = ()
@@ -73,7 +74,9 @@ let identifier =
   end ^? "identifire"
 
 let word w =
-  (identifier >>= fun s -> guard (s = w) ^? (!%"expected '%s' but '%s'" w s) >> return s) 
+  (identifier >>= fun s -> guard (s = w) ^? (!%"expected '%s' but '%s'" w s) >> return s)
+
+let optb_word w = optb (word w)
 
 let graphic_character =
   identifier_letter <|> digit
@@ -747,7 +750,22 @@ let rec basic_declaration () =
   (* subtype_declaration *)
   <|> (word "subtype" >> defining_identifier >>= fun id -> word"is">>
     subtype_indication() >>= fun ind -> semicolon>>- BDeclSubtype(id, ind))
-  (*TODO object_declaration *)
+  (* object_declaration *)
+  <|> (defining_identifier_list >>= fun ids ->
+    token_char ':'>> optb_word "aliased" >>= fun aliased ->
+    optb_word "constant" >>= fun const ->
+    (subtype_indication() >>= fun ind -> opt (symbol":=">> expression()) >>=
+     fun e -> semicolon>>- BDeclObj_1(ids, aliased, const, ind, e))
+    <|> (array_type_definition >>= fun arr -> opt (symbol":=">> expression())
+     >>= fun e -> semicolon>>- BDeclObj_2(ids, aliased, const, arr, e)))
+  (*  single_task_declaration *)
+  <|> (word"task">> defining_identifier >>= fun id ->
+    opt (word"is">> task_definition) >>= fun task -> semicolon>>-
+    BDeclObj_3(id, task))
+  (*  single_protected_declaration *)
+  <|> (word"protected">> defining_identifier >>= fun id -> word"is">>
+    protected_definition >>= fun prot -> semicolon>>-
+    BDeclObj_4(id, prot))
   (* number_declaration *)
   <|> (defining_identifier_list >>= fun ids ->
     token_char ':'>> word"constant" >> symbol ":=">>
