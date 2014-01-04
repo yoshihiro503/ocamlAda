@@ -274,6 +274,7 @@ type repr_clause =
 (*==================3*)
 type basic_decl =
   | BDeclType of type_decl
+  | BDeclSubtype of identifier * subtype_ind
   | BDeclNumb of identifier list * expression
   (*TODO*)
 type basic_decl_item =

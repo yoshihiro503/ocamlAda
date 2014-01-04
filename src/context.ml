@@ -29,6 +29,7 @@ let set : kind -> A.name -> t -> t = fun kind name ctx ->
   Hashtbl.add ctx name kind; ctx
 
 let check_ : kind -> A.name -> t -> bool = fun kind name ctx ->
+  if kind = Prefix then true else
   try Hashtbl.find ctx name = kind with
   | Not_found -> false
 let check k n c =
@@ -41,6 +42,7 @@ let init ctx =
   List.map (fun n -> set Prefix n ctx) [
     A.NDirect "Ada";
     A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Numerics");
+    A.NDirect "Positive";
   ] |> ignore;
   List.map (fun n -> set Submark n ctx) [
     A.NDirect "Integer";

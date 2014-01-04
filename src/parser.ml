@@ -226,14 +226,15 @@ and name_ () : name parser =
     return @@ NFunCall (fname, Some params)
   in
   let next ctx (prename : name) =
-    if C.check C.FuncName prename ctx then
+    begin if C.check C.FuncName prename ctx then
       fname_next (FunName prename)
     else if C.check C.Submark prename ctx then
       submark_next (SubtypeMark prename)
-    else if C.check C.Prefix prename ctx then
-      prefix_next (Prefix prename)
     else
       name_next prename
+    end <|>
+      (guard (C.check C.Prefix prename ctx)>>
+       prefix_next (Prefix prename))
   in
   let rec name_nexts ctx (prevname : name) : name parser =
     (next ctx prevname >>= fun n -> name_nexts ctx n)
@@ -419,7 +420,7 @@ let array_type_definition =
    pclose>> word"of">> component_definition >>= fun comp ->
    return @@ ArrTypeConst(ds, comp))
   (* unconstrained_array_definition *)
-  <|> (word"array">> popen>> comsep1 index_subtype_definition^?"indsubdef" >>= fun is ->
+  <|> (word"array">> popen>> comsep1 index_subtype_definition >>= fun is ->
     pclose>> word"of">> component_definition >>= fun comp ->
     return @@ ArrTypeUncon(is, comp))
 
@@ -735,7 +736,9 @@ let representation_clause =
 
 let rec basic_declaration () =
   (type_declaration >>=- fun td -> BDeclType td)
-  (*TODO subtype_declaration *)
+  (* subtype_declaration *)
+  <|> (word "subtype" >> defining_identifier >>= fun id -> word"is">>
+    subtype_indication() >>= fun ind -> semicolon>>- BDeclSubtype(id, ind))
   (*TODO object_declaration *)
   (* number_declaration *)
   <|> (defining_identifier_list >>= fun ids ->
@@ -774,7 +777,7 @@ let library_unit_declaration : unit parser = todo "library_unit_declaration"
 
 let body = todo "body"
 let declarative_part () =
-  many1 (basic_declarative_item() <|> body) ^? "declarative_part"
+  many (basic_declarative_item() <|> body) ^? "declarative_part"
 
 (** {3:d5 D 5.} *)
 
