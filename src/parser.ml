@@ -757,7 +757,8 @@ let rec basic_declaration () =
   (* abstract_subprogram_declaration *)
   <|> (subprogram_specification << word"is"<<word"abstract"<<semicolon
      >>=- fun sp -> BDeclAbsSubprog sp)
-  (*TODO package_declaration *)
+  (* package_declaration *)
+  <|> (package_declaration() >>=- fun pack -> BDeclPackage pack)
   (*TODO generic_declaration *)
   (*TODO generic_instantiation *)
   
@@ -769,9 +770,14 @@ and basic_declarative_item () =
 
 (** {3:c7 C 7. } *)
 
-and package_declaration () = todo "package_declaration"
+and package_declaration () = package_specification() <<semicolon
 
-and package_specification () = todo "package_specification"
+and package_specification () =
+  word"package">> defining_program_unit_name >>= fun n ->
+  word"is">> many (basic_declarative_item()) >>= fun ds ->
+  opt (word"private">> many (basic_declarative_item())) >>= fun pds ->
+  word"end">> opt (opt (parent_unit_name <<token_char '.') >*< identifier) >>=-
+  fun uname -> (n, ds, pds, uname)
 
 (** {3:c12 C 12. } *)
 

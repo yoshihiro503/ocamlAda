@@ -279,18 +279,22 @@ type repr_clause =
   | ReprRecord of first_subtype_local_name * mod_clause option * comp_clause list
 
 (*==================3*)
-type basic_decl =
+and basic_decl =
   | BDeclType of type_decl
   | BDeclSubtype of identifier * subtype_ind
   | BDeclSubprog of subprogram_spec
   | BDeclAbsSubprog of subprogram_spec
   | BDeclNumb of identifier list * expression
+  | BDeclPackage of package_spec
   (*TODO*)
-type basic_decl_item =
+and basic_decl_item =
   | BDItemBasic of basic_decl
   | BDItemRepr of repr_clause
   | BDItemUse of use_clause
 (*==================3*)
+(*==================6*)
+and package_spec = def_program_unit_name * basic_decl_item list * basic_decl_item list option * (parent_unit_name option * identifier) option
+(*==================6*)
 
 (** {2:c C山} *)
 
