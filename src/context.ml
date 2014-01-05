@@ -83,7 +83,12 @@ let update_for_basic_decl_item bditem ctx =
   | A.BDItemBasic(A.BDeclAbsSubprog subprogram_spec) -> ctx(*TODO*)
   | A.BDItemBasic(A.BDeclNumb (ids, expr)) -> ctx(*TODO*)
   | A.BDItemBasic(A.BDeclPackage package_spec) -> ctx(*TODO*)
-  | A.BDItemBasic(A.BDeclGenInst generic_inst) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclGenInst(A.GInstPackage(uname, pack_name, actuals))) ->
+      set Package (A.name_of_dfp_uname uname) ctx
+  | A.BDItemBasic(A.BDeclGenInst (A.GInstProc (uname, prod_name, actuals))) ->
+      set ProcName (A.name_of_dfp_uname uname) ctx
+  | A.BDItemBasic(A.BDeclGenInst (A.GInstFunc (uname, func_name, actuals))) ->
+      set FuncName (A.name_of_dfp_uname uname) ctx
   | A.BDItemBasic(A.BDeclObj_1 (ids, aliesed, constant, ind, expr_opt)) -> ctx(*TODO*)
   | A.BDItemBasic(A.BDeclObj_2 (ids, aliesed, constant, arrty, expr_opt)) -> ctx(*TODO*)
   | A.BDItemBasic(A.BDeclObj_3 (ids, task_opt)) -> ctx(*TODO*)

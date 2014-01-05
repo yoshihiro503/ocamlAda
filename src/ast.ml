@@ -243,6 +243,9 @@ type context_clause =
 (** 12. Generic Units *)
 
 type dfp_unit_name = parent_unit_name option * identifier
+let name_of_dfp_uname = function
+  | (Some (ParentUnit name), id) -> NSelectedComp (Prefix name, id)
+  | (None, id) -> NDirect id
 
 type gen_assoc0 =
   | GAsExpr of expression
