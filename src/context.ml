@@ -27,6 +27,8 @@ type t = (A.name, kind) Hashtbl.t
 
 let set : kind -> A.name -> t -> t = fun kind name ctx ->
   Hashtbl.add ctx name kind; ctx
+let set_all : kind -> A.name list -> t -> t = fun kind names ctx0 ->
+  List.fold_left (fun ctx name -> set kind name ctx) ctx0 names
 
 let check_ : kind -> A.name -> t -> bool = fun kind name ctx ->
   if kind = Prefix then true else
@@ -89,8 +91,12 @@ let update_for_basic_decl_item bditem ctx =
       set ProcName (A.name_of_dfp_uname uname) ctx
   | A.BDItemBasic(A.BDeclGenInst (A.GInstFunc (uname, func_name, actuals))) ->
       set FuncName (A.name_of_dfp_uname uname) ctx
-  | A.BDItemBasic(A.BDeclObj_1 (ids, aliesed, constant, ind, expr_opt)) -> ctx(*TODO*)
-  | A.BDItemBasic(A.BDeclObj_2 (ids, aliesed, constant, arrty, expr_opt)) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclObj_1 (ids, aliesed, constant, ind, expr_opt)) ->
+      ids |> List.map (fun n -> A.NDirect n)
+      |> fun ns -> set_all Variable ns ctx
+  | A.BDItemBasic(A.BDeclObj_2 (ids, aliesed, constant, arrty, expr_opt)) ->
+      ids |> List.map (fun n -> A.NDirect n)
+      |> fun ns -> set_all Variable ns ctx
   | A.BDItemBasic(A.BDeclObj_3 (ids, task_opt)) -> ctx(*TODO*)
   | A.BDItemBasic(A.BDeclObj_4 (ids, prot_opt)) -> ctx(*TODO*)
   (*TODO*)
