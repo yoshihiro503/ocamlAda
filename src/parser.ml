@@ -152,9 +152,7 @@ let defining_identifier = identifier
 let rec subtype_indication () =
   subtype_mark() >>= fun n -> opt (constraint_()) >>= fun c -> return(n,c)
 
-and subtype_mark () =
-  name None >>= fun n -> sguard (C.check C.Submark n) >>
-  return @@ SubtypeMark n
+and subtype_mark () = name (Some C.Submark) >>=- fun n -> SubtypeMark n
 
 and constraint_ () =
   (range_constraint() >>= fun r -> return @@ CoRange r)
@@ -254,8 +252,7 @@ and name_ kind : name parser =
   ((direct_name |> with_state) >>= fun (d,ctx) -> name_nexts ctx (NDirect d)) <|> ((character_literal |>with_state) >>= fun (c,ctx) -> name_nexts ctx (NChar c))
     ^? "name"
 and prefix () =
-  name None >>= fun n -> sguard (C.check C.Prefix n) >>
-  return @@ Prefix n
+  name (Some C.Prefix) >>=- fun n -> Prefix n
 
 and attribute_designator () : attribute parser =
   (word "Access" >> return AAccess)
@@ -535,14 +532,10 @@ let type_declaration =
 (** {3:bb5 BB 5. Statements} *)
 
 (** =============6*)
-let procedure_name =
-  name None >>= fun n -> sguard (C.check C.ProcName n) >>
-  return @@ ProcName n  
+let procedure_name = name (Some C.ProcName) >>=- fun n -> ProcName n
 (** =============6*)
 
-let variable_name =
-  name None >>= fun n -> sguard (C.check C.Variable n) >>
-  return @@ VarName n
+let variable_name = name (Some C.Variable) >>=- fun n -> VarName n
   
 let simple_statement : statement_elem parser =
   let pname =
@@ -579,14 +572,10 @@ let label =
 
 (** {3:bb6 BB 6. Subprograms} *)
 
-let function_name =
-  name None >>= fun n -> sguard (C.check C.FuncName n) >>
-  return @@ FunName n
+let function_name = name (Some C.FuncName) >>=- fun n -> FunName n
 
 (**======from 10 **)
-let parent_unit_name =
-  name None >>= fun n -> sguard (C.check C.ParentUnit n) >>
-  return @@ ParentUnit n
+let parent_unit_name = name (Some C.ParentUnit) >>=- fun n -> ParentUnit n
 (**======from 10 **)
 
 let defining_program_unit_name =
@@ -648,15 +637,11 @@ let use_clause =
   
 (** {3:bb9 BB 9.} *)
 
-let entry_name =
-  name None >>= fun n -> sguard (C.check C.EntryName n)>>
-  return @@ EntryName n
+let entry_name = name (Some C.EntryName) >>=- fun n -> EntryName n
 
 (** {3:bb10 BB 10. Program Structure and Compilation Issues} *)
 
-let library_unit_name = name None >>= fun n -> 
-  sguard (C.check C.LibraryUnit n) >>
-  return @@ LibraryUnit n
+let library_unit_name = name (Some C.LibraryUnit) >>=- fun n -> LibraryUnit n
 
 let with_clause =
   word "with" >>
