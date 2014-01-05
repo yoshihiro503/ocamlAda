@@ -541,17 +541,23 @@ let procedure_name = name (Some C.ProcName) >>=- fun n -> ProcName n
 
 let variable_name = name (Some C.Variable) >>=- fun n -> VarName n
   
+let condition = expression()
+
 let simple_statement_ : statement_elem parser =
   let pname =
     (procedure_name |> map (fun p -> PNProcName p))
     <|> (prefix() |> map (fun pre -> PNPrefix pre))
   in
+  let loop_name = name None in
   (* null_statement *)
   (word "null" >> semicolon >> return StNull)
   (* assignment_statement *)
   <|> (variable_name >>= fun vname -> symbol ":=" >>
        expression() >>= fun expr -> semicolon >> return @@ StAssign(vname,expr))
-  (* TODO exit *)
+  (* exit_statement *)
+  <|> (word"exit">> opt loop_name >>= fun lname ->
+    opt (word "when">> condition) >>= fun cond -> semicolon>>-
+    StExit(lname, cond))
   (* TODO goto *)
   (* procedure_call_statement *)
   <|> (pname >>= fun n -> print_endline"proc_call_statement";
@@ -568,8 +574,6 @@ let simple_statement_ : statement_elem parser =
   (* TODO code *)
 let simple_statement : statement_elem parser =
     simple_statement_ ^? "simple_statement"
-
-let condition = expression()
 
 let statement_identifier = direct_name
 let label =

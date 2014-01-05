@@ -330,6 +330,7 @@ and statement_elem =
   | StAssign of variable_name * expression
   | StProcCall of pname * param_assoc list option
   | StReturn of expression option
+  | StExit of name option * condition option
 (*TODO compound_statement *)
   | StIf of (condition * seq_statements) list * seq_statements option
   | StLoop_While of (identifier option * condition * seq_statements * identifier option)
