@@ -332,6 +332,8 @@ and statement_elem =
   | StReturn of expression option
 (*TODO compound_statement *)
   | StIf of (condition * seq_statements) list * seq_statements option
+  | StLoop_While of (identifier option * condition * seq_statements * identifier option)
+  | StLoop_For of (identifier option * identifier * bool * discrete_subtype_def * seq_statements * identifier option)
 (** 6. Subprograms **)
 and pname =
   | PNPrefix of prefix

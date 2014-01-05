@@ -13,6 +13,7 @@ LIBFILES[] =
 	parserMonad
 	ast
 	context
+	reserved
 	parser
 
 LIB = lib

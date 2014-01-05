@@ -66,15 +66,18 @@ let digit =
 let identifier_letter =
   char_when (function | 'a'..'z' | 'A'..'Z' -> true | _ -> false) ^? "identletter"
 
-let identifier =
+let identifier_ =
   token begin
     identifier_letter >>= fun c1 ->
     many (identifier_letter <|> char '_' <|> digit) >>= fun cs ->
     return @@ string_of_chars (c1::cs)
-  end ^? "identifire"
+  end
 
 let word w =
-  (identifier >>= fun s -> guard (s = w) ^? (!%"expected '%s' but '%s'" w s) >> return s)
+  (identifier_ >>= fun s -> guard (s = w) ^? (!%"expected '%s' but '%s'" w s) >> return s)
+
+let identifier =
+  identifier_ >>= fun s -> guard (Reserved.check s = false) >>- s
 
 let optb_word w = optb (word w)
 
@@ -835,7 +838,18 @@ and compound_statement () =
    word "end" >> word "if" >> semicolon >>
    return @@ StIf(ss, else_))
   (* TODO case_statement *)
-  (* TODO loop_statement *)
+  (* loop_statement *)
+  <|> (opt (statement_identifier << token_char ':') >>= fun id1 ->
+    (word "while">> condition >>= fun cond ->
+     word "loop">> sequence_of_statements() >>= fun sts ->
+     word"end">>word"loop">> opt statement_identifier >>= fun id2 ->
+     semicolon>>- StLoop_While(id1, cond, sts, id2))
+    <|> (word "for">> defining_identifier >>= fun defid ->
+      word"in">> optb_word"reverse">>= fun rev ->
+      discrete_subtype_definition >>= fun disc ->
+      word "loop">> sequence_of_statements() >>= fun sts ->
+      word"end">>word"loop">> opt statement_identifier >>= fun id2 ->
+      semicolon>>- StLoop_For(id1, defid, rev, disc, sts, id2)))
   (* TODO block_statement *)
   (* TODO accept_statement *)
   (* TODO select_statement*)
