@@ -337,7 +337,8 @@ and factor () =
        return @@ FPow(p, pps))
 
 and term () =
-  let mop = (token_char '*' >> return Mult) <|> (token_char '/' >> return Div) (*TODO*)
+  let mop = (token_char '*' >> return Mult) <|> (token_char '/' >> return Div)
+    <|> (word "mod" >> return Mod) <|> (word "rem" >> return Rem)
   in
   factor() >>= fun f -> many (mop >*< factor()) >>= fun mfs ->
   return @@ Term(f, mfs)
