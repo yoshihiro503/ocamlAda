@@ -1,0 +1,22 @@
+.PHONY: all install clean sample lib
+
+################################################
+# Build an OCaml program
+#
+
+OCAMLINCLUDES += ../src/
+
+OCAML_LIBS += ../src/lib
+OCAML_OTHER_LIBS += unix
+OCAMLFLAGS = -annot
+
+FILES[] =
+       sample
+
+PROGRAM = sample
+
+$(PROGRAM): $(OCamlProgram $(PROGRAM), $(FILES))
+
+clean:
+       rm -f *~ *.opt *.run *.cm[ioax] *.cmxa *.o *.annot $(PROGRAM)
+
