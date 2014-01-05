@@ -25,7 +25,7 @@
 # Phony targets are scoped, so you probably want to declare them first.
 #
 
-.PHONY: all install clean sample lib top
+.PHONY: all install clean lib top sample
 
 ########################################################################
 # Subdirectories.

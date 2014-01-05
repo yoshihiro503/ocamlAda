@@ -153,7 +153,7 @@ let rec subtype_indication () =
   subtype_mark() >>= fun n -> opt (constraint_()) >>= fun c -> return(n,c)
 
 and subtype_mark () =
-  name() >>= fun n -> sguard (C.check C.Submark n) >>
+  name None >>= fun n -> sguard (C.check C.Submark n) >>
   return @@ SubtypeMark n
 
 and constraint_ () =
@@ -200,9 +200,9 @@ and discrete_choice () =
 
 (** {3:b4 B 4. Names and Expressions} *)
 
-and name () =
-  name_() >>= fun n -> print_endline ("Name: "^sname n); return n
-and name_ () : name parser =
+and name kind =
+  name_ kind >>= fun n -> print_endline ("Name: "^sname n); return n
+and name_ kind : name parser =
   let prefix_next prefix =
     (*indexed_component*)
     (popen >> sep1(token_char '.')(expression()) << pclose >>= fun es -> return @@ NIndexedComp(prefix, es))
@@ -241,14 +241,20 @@ and name_ () : name parser =
       (guard (C.check C.Prefix prename ctx)>>
        prefix_next (Prefix prename))
   in
+  let match_kind n ctx =
+    match kind with
+    | Some k -> C.check k n ctx
+    | None -> true
+  in
   let rec name_nexts ctx (prevname : name) : name parser =
-    (next ctx prevname >>= fun n -> name_nexts ctx n)
-    <|> return prevname
+    (next ctx prevname >>= fun n -> name_nexts ctx n >>= fun n' ->
+     sguard(match_kind n') >> return n')
+    <|> (return prevname << sguard(match_kind prevname))
   in
   ((direct_name |> with_state) >>= fun (d,ctx) -> name_nexts ctx (NDirect d)) <|> ((character_literal |>with_state) >>= fun (c,ctx) -> name_nexts ctx (NChar c))
     ^? "name"
 and prefix () =
-  name() >>= fun n -> sguard (C.check C.Prefix n) >>
+  name None >>= fun n -> sguard (C.check C.Prefix n) >>
   return @@ Prefix n
 
 and attribute_designator () : attribute parser =
@@ -319,7 +325,7 @@ and primary () =
          <|> (qualified_expression()>>= fun q-> return @@ PAllocator(AlQual q)))
   <|> (aggregate() >>= fun a -> return @@ PAggregate a)
   <|> (qualified_expression() >>= fun q -> return @@ PQual q)
-  <|> (name() >>= fun n -> return @@ PName n)
+  <|> (name None >>= fun n -> return @@ PName n)
   <|> (popen >> expression() << pclose >>= fun e ->
        return @@ PParen e)
 
@@ -530,12 +536,12 @@ let type_declaration =
 
 (** =============6*)
 let procedure_name =
-  name() >>= fun n -> sguard (C.check C.ProcName n) >>
+  name None >>= fun n -> sguard (C.check C.ProcName n) >>
   return @@ ProcName n  
 (** =============6*)
 
 let variable_name =
-  name() >>= fun n -> sguard (C.check C.Variable n) >>
+  name None >>= fun n -> sguard (C.check C.Variable n) >>
   return @@ VarName n
   
 let simple_statement : statement_elem parser =
@@ -574,12 +580,12 @@ let label =
 (** {3:bb6 BB 6. Subprograms} *)
 
 let function_name =
-  name() >>= fun n -> sguard (C.check C.FuncName n) >>
+  name None >>= fun n -> sguard (C.check C.FuncName n) >>
   return @@ FunName n
 
 (**======from 10 **)
 let parent_unit_name =
-  name() >>= fun n -> sguard (C.check C.ParentUnit n) >>
+  name None >>= fun n -> sguard (C.check C.ParentUnit n) >>
   return @@ ParentUnit n
 (**======from 10 **)
 
@@ -629,25 +635,26 @@ let designator =
 (** {3:bb8 BB 8.} *)
 
 let package_name =
-  name() >>= fun n -> sguard (C.check C.Package n) >>
-  return @@ PackageName n
+  name (Some C.Package) >>=- fun n -> PackageName n
+(*  name() >>= fun n -> sguard (C.check C.Package n) >>
+  return @@ PackageName n*)
 
 let use_clause =
   word "use" >>
   begin
     (comsep1 package_name >>= fun ps -> return @@ UCPackage ps)
-    <|> (word "type" >> comsep1 (subtype_mark ()) >>= fun ss -> return @@ UCType ss)
+    <|> (word "type" >> comsep1 (subtype_mark()) >>= fun ss -> return @@ UCType ss)
   end << token_char ';'
   
 (** {3:bb9 BB 9.} *)
 
 let entry_name =
-  name() >>= fun n -> sguard (C.check C.EntryName n)>>
+  name None >>= fun n -> sguard (C.check C.EntryName n)>>
   return @@ EntryName n
 
 (** {3:bb10 BB 10. Program Structure and Compilation Issues} *)
 
-let library_unit_name = name() >>= fun n -> 
+let library_unit_name = name None >>= fun n -> 
   sguard (C.check C.LibraryUnit n) >>
   return @@ LibraryUnit n
 
@@ -822,10 +829,12 @@ and declarative_part () =
     (proper_body() >>=- fun b -> BodyProper b)
     (*TODO body_stub*)
   in
-  many begin
+  let decl_part1 = begin
     (basic_declarative_item() >>=- fun b -> DeclBasic b)
     <|> (body() >>=- fun b -> DeclBody b)
-  end ^? "declarative_part"
+  end >>= fun decl -> update_state(C.update_for_decl decl)>>- decl
+  in
+  many decl_part1
 
 (** {3:d5 D 5.} *)
 

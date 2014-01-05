@@ -74,3 +74,25 @@ let create () : t =
   init ctx
   
 
+let update_for_basic_decl_item bditem ctx =
+  match bditem with
+  | A.BDItemBasic(A.BDeclType type_decl) ->
+      set Submark (A.NDirect (A.typename type_decl)) ctx
+  | A.BDItemBasic(A.BDeclSubtype (id, ind)) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclSubprog subprogram_spec) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclAbsSubprog subprogram_spec) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclNumb (ids, expr)) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclPackage package_spec) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclGenInst generic_inst) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclObj_1 (ids, aliesed, constant, ind, expr_opt)) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclObj_2 (ids, aliesed, constant, arrty, expr_opt)) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclObj_3 (ids, task_opt)) -> ctx(*TODO*)
+  | A.BDItemBasic(A.BDeclObj_4 (ids, prot_opt)) -> ctx(*TODO*)
+  (*TODO*)
+  | A.BDItemRepr repr_clause -> ctx(*TODO*)
+  | A.BDItemUse use_clause -> ctx(*TODO*)
+let update_for_body_decl body ctx = ctx(*TODO*)
+let update_for_decl = function
+  | A.DeclBasic bditem -> update_for_basic_decl_item bditem
+  | A.DeclBody body -> update_for_body_decl body
+
