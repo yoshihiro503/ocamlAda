@@ -541,7 +541,7 @@ let procedure_name = name (Some C.ProcName) >>=- fun n -> ProcName n
 
 let variable_name = name (Some C.Variable) >>=- fun n -> VarName n
   
-let simple_statement : statement_elem parser =
+let simple_statement_ : statement_elem parser =
   let pname =
     (procedure_name |> map (fun p -> PNProcName p))
     <|> (prefix() |> map (fun pre -> PNPrefix pre))
@@ -566,6 +566,8 @@ let simple_statement : statement_elem parser =
   (* TODO abort *)
   (* TODO raise *)
   (* TODO code *)
+let simple_statement : statement_elem parser =
+    simple_statement_ ^? "simple_statement"
 
 let condition = expression()
 
@@ -859,7 +861,7 @@ and statement () =
   (simple_statement <|> compound_statement()) >>= fun st ->
   return @@ (labels, st)
 and sequence_of_statements () =
-  many1 (statement())
+  many1 (statement() ^? "statement")
 
 (** {3:d6 D 6.} *)
 
