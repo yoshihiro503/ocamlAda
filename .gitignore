@@ -9,6 +9,6 @@ OMakeroot.omc
 *.a
 *.annot
 
-sample
-sample.opt
-sample.run
+sample/sample
+sample/sample.opt
+sample/sample.run
