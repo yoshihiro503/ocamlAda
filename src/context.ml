@@ -51,10 +51,12 @@ let init ctx =
     A.NDirect "Integer";
     A.NDirect "Character";
     A.NDirect "Float";
+    A.NDirect "Natural";
     A.NDirect "Positive";
   ] |> ignore;
   List.map (fun n -> set ProcName n ctx) [
-    A.NDirect "Put_Line"
+    A.NDirect "Put_Line";
+    A.NDirect "Put";
   ] |> ignore;
   List.map (fun n -> set LibraryUnit n ctx) [
     A.NSelectedComp(A.Prefix(A.NDirect "Ada"), "Text_Io");
